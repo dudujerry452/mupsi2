@@ -1,0 +1,16 @@
+# 构建产物
+/build/
+/compile_commands.json
+
+# 编辑器
+/.vscode/
+
+# direnv 本地配置(每台机器/每个用户自选)
+/.envrc
+/.direnv/
+
+# 运行时大文件 / 生成物
+*.png
+*.exr
+*.obj
+*.hdr
