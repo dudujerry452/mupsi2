@@ -11,7 +11,7 @@ find_package(nlohmann_json REQUIRED)
 find_package(OpenMP REQUIRED)
 
 # ——— CPU 后端库(始终编译)———
-file(GLOB CPU_SOURCES src/backend/cpu/*.cpp)
+file(GLOB_RECURSE CPU_SOURCES CONFIGURE_DEPENDS src/kernels/*.cpp src/host/*.cpp)
 add_library(mupsi_backend_cpu STATIC ${CPU_SOURCES})
 target_include_directories(mupsi_backend_cpu PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(mupsi_backend_cpu PUBLIC OpenMP::OpenMP_CXX)
@@ -22,21 +22,24 @@ set(MUPSI_HAS_CUDA FALSE)
 
 if(MUPSI_ENABLE_CUDA)
   include(CheckLanguage)
-  check_language(CUDA)
-  if(CMAKE_CUDA_COMPILER)
-    enable_language(CUDA)
-    set(CMAKE_CUDA_STANDARD 17)
+  check_language(CUDA) # define CMAKE_CUDA_COMPILER
+  if(CMAKE_CUDA_COMPILER) # nvcc success 
+    enable_language(CUDA) # enable .cu
+    set(CMAKE_CUDA_STANDARD 20)
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
     find_package(CUDAToolkit QUIET)
 
-    file(GLOB CUDA_SOURCES src/backend/cuda/*.cu)
+    file(GLOB_RECURSE CUDA_SOURCES CONFIGURE_DEPENDS src/kernels/*.cu)
     add_library(mupsi_backend_cuda STATIC ${CUDA_SOURCES})
     target_include_directories(mupsi_backend_cuda PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
     if(TARGET CUDA::cublas)
+      message(STATUS "CUDA cublas ENABLED")
       target_link_libraries(mupsi_backend_cuda PUBLIC CUDA::cublas)
     endif()
     if(TARGET CUDA::cudart)
+    message(STATUS "CUDA cudart ENABLED")
       target_link_libraries(mupsi_backend_cuda PUBLIC CUDA::cudart)
     endif()
 

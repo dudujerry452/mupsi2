@@ -12,3 +12,11 @@
   #define MPHD 
   #define MPG
 #endif
+
+namespace mps {
+
+  enum class Backend {
+    CPU, 
+    CUDA
+  }; 
+}
