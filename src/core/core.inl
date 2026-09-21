@@ -1,5 +1,5 @@
 #pragma once 
-#include "core/types.inl"
+
 
 #if defined(__CUDACC__) 
   #define MPH __host__
@@ -20,3 +20,6 @@ namespace mps {
     CUDA
   }; 
 }
+
+#include "core/types.h"
+#include "core/cuda_util.inl"

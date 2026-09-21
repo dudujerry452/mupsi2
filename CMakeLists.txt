@@ -6,6 +6,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# ——— 编译告警 ———
+add_compile_options(
+  "$<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>"
+  "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Wextra>"
+)
+
 # ——— 依赖 ———
 find_package(nlohmann_json REQUIRED)
 find_package(OpenMP REQUIRED)
@@ -25,6 +31,7 @@ if(MUPSI_ENABLE_CUDA)
   check_language(CUDA) # define CMAKE_CUDA_COMPILER
   if(CMAKE_CUDA_COMPILER) # nvcc success 
     enable_language(CUDA) # enable .cu
+    set(CMAKE_CUDA_ARCHITECTURES native) # tells nvcc the gpu arch
     set(CMAKE_CUDA_STANDARD 20)
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
@@ -39,7 +46,7 @@ if(MUPSI_ENABLE_CUDA)
       target_link_libraries(mupsi_backend_cuda PUBLIC CUDA::cublas)
     endif()
     if(TARGET CUDA::cudart)
-    message(STATUS "CUDA cudart ENABLED")
+      message(STATUS "CUDA cudart ENABLED")
       target_link_libraries(mupsi_backend_cuda PUBLIC CUDA::cudart)
     endif()
 
