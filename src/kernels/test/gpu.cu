@@ -7,6 +7,7 @@
 
 #include "core/core.inl"
 #include "core/random.inl"
+#include "core/cuda_util.inl"
 
 
 namespace mps::kernels {

@@ -21,5 +21,4 @@ namespace mps {
   }; 
 }
 
-#include "core/types.h"
-#include "core/cuda_util.inl"
+#include "core/types.inl"
