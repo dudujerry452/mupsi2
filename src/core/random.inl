@@ -1,6 +1,6 @@
 #pragma once 
 
-#include "core/core.h"
+#include "core/core.inl"
 
 #if defined(__CUDA_ARCH__)
 #include <cuda/std/bit> 

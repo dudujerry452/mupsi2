@@ -1,5 +1,5 @@
 #pragma once 
-#include "core/types.h"
+#include "core/types.inl"
 
 #if defined(__CUDACC__) 
   #define MPH __host__

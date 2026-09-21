@@ -1,18 +1,15 @@
 #pragma once
-#include "core/core.h"
-#include "core/types.h"
+#include "kernels/saxpy.inl"
 
 namespace mps {
 
 enum class Backend { CPU, CUDA };
 
-MPHD inline void saxpy(f32 a, f32 x, f32& y) {
-    y += a * x;
-}
-
+// 壳:主模板声明
 template<Backend B> struct SaxpyDispatch;
 
-// test.cpp test.cu
+// 显式特化必须在使用点之前声明,这里声明两个特化(带成员声明),
+// 定义放在各自的 backend 文件里(CPU 在 .cpp, CUDA 在 .cu)。
 template<> struct SaxpyDispatch<Backend::CPU> {
     static void run(f32 a, const f32* x, f32* y, i32 n);
 };
