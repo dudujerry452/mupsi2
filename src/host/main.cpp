@@ -4,6 +4,9 @@
 #include "core/basic/core.h"
 #include "kernels/entrance/dispatch.h"
 
+#include "core/utils/log.h"
+#include "core/primitive/primitive.h"
+
 #if defined(MUPSI_USE_CUDA)
 constexpr mps::Backend ACTIVE_BACKEND = mps::Backend::CUDA;
 #else

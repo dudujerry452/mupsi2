@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include "core/basic/core.h"
+#include "core/basic/backend.h"
 
 namespace mps {
   using u32 = uint32_t;
@@ -12,5 +12,10 @@ namespace mps {
   MPHD vec3f operator+(const vec3f& a, const vec3f& b);
   MPHD vec3f operator*(const vec3f& a, const vec3f& b);
   MPHD vec3f operator&(const vec3f& a, const vec3f& b); // cross
+
+  enum class Backend: u32 {
+    CPU,
+    CUDA
+  };
 
 }
