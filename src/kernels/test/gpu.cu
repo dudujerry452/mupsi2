@@ -5,9 +5,9 @@
 #include <cstdio>
 #include <cstdlib>
 
-#include "core/core.inl"
-#include "core/random.inl"
-#include "core/cuda_util.inl"
+#include "core/core.h"
+#include "core/random.h"
+#include "utils/cuda_util.inl"
 
 
 namespace mps::kernels {

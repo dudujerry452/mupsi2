@@ -1,6 +1,6 @@
 #pragma once 
 
-#include "core/core.inl"
+#include "core/types.h"
 
 namespace mps::kernels {
 
