@@ -65,12 +65,12 @@ endif()
 
 if(NOT MUPSI_HAS_CUDA) 
 # ——— CPU 后端库(始终编译:kernels/*.cpp + host/*.cpp, 仅 g++)———
-  file(GLOB_RECURSE CPU_SOURCES CONFIGURE_DEPENDS src/kernels/*.cpp src/host/*.cpp)
+  file(GLOB_RECURSE CPU_SOURCES CONFIGURE_DEPENDS src/kernels/*.cpp)
   add_library(mupsi_backend_cpu STATIC ${CPU_SOURCES})
   target_link_libraries(mupsi_backend_cpu PUBLIC mupsi_core mupsi_header OpenMP::OpenMP_CXX)
 else()
 # ——— CUDA 后端库(kernels/*.cu, 检测到 nvcc 才编译)———
-  file(GLOB_RECURSE CUDA_SOURCES CONFIGURE_DEPENDS src/kernels/*.cu src/host/*.cpp)
+  file(GLOB_RECURSE CUDA_SOURCES CONFIGURE_DEPENDS src/kernels/*.cu)
   set_source_files_properties(${CORE_SOURCES} PROPERTIES 
     LANGUAGE CUDA
     COMPILE_OPTIONS "-x;cu;-dc"
@@ -91,7 +91,8 @@ else()
 endif()
 
 # ——— 可执行文件:链接所有可用后端 ———
-add_executable(mupsi src/main.cpp)
+file(GLOB_RECURSE HOST_SOURCES CONFIGURE_DEPENDS src/host/*.cpp)
+add_executable(mupsi ${HOST_SOURCES})
 target_link_libraries(mupsi PRIVATE mupsi_header mupsi_core nlohmann_json::nlohmann_json)
 if(NOT MUPSI_HAS_CUDA)
   target_link_libraries(mupsi PRIVATE mupsi_backend_cpu)
