@@ -1,4 +1,4 @@
-#include "./dispatch.h"
+#include "core/kernels/test/dispatch.h"
 
 #include <cuda_runtime.h>
 

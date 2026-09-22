@@ -1,6 +1,6 @@
 #pragma once
 
-#if !defined(__CUDA_ARCH__) && defined(__CUDACC__) // only for host code in nvcc
+#if defined(__CUDACC__) // only for host code in nvcc
 
 #include <cstdio>
 #include <cstdlib>
