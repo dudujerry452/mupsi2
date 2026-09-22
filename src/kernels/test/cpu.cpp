@@ -1,6 +1,6 @@
-#include "./dispatch.h"
+#include "kernels/test/dispatch.h"
 
-#include "core/random.h"
+#include "core/math/random.h"
 
 namespace mps::kernels {
 

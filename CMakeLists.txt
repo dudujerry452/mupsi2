@@ -46,9 +46,9 @@ add_library(mupsi_header INTERFACE)
 target_include_directories(mupsi_header INTERFACE ${CMAKE_SOURCE_DIR}/src)
 
 # ——— core:设备无关计算代码; 只存在g++时用g++编译, 否则用nvcc编译(因为标记了MPHD,因此编译为device和host)———
-file(GLOB CORE_SOURCES CONFIGURE_DEPENDS src/core/*.cpp)
+file(GLOB_RECURSE CORE_SOURCES CONFIGURE_DEPENDS src/core/*.cpp)
 add_library(mupsi_core STATIC ${CORE_SOURCES})
-target_include_directories(mupsi_core PUBLIC ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(mupsi_core PRIVATE mupsi_header)
 if(MUPSI_HAS_CUDA)
   # 标记core files
   set_source_files_properties(${CORE_SOURCES} PROPERTIES 

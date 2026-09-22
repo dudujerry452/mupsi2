@@ -1,4 +1,4 @@
-#include "core/random.h"
+#include "core/math/random.h"
 
 namespace mps::core {
 

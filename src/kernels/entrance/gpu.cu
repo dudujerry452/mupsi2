@@ -1,5 +1,5 @@
 #include "kernels/entrance/dispatch.h"
-#include "utils/log.inl"
+#include "core/utils/log.h"
 
 namespace mps::kernels {
 

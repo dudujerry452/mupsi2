@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include "core/core.h"
+#include "core/basic/core.h"
 
 namespace mps {
   using u32 = uint32_t;

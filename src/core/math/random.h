@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/types.h"
+#include "core/basic/types.h"
 
 #if defined(__CUDA_ARCH__)
 #include <cuda/std/bit>

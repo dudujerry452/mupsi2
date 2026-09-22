@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
 
-#include "core/core.h"
+#include "core/basic/core.h"
 #include "kernels/entrance/dispatch.h"
 
 #if defined(MUPSI_USE_CUDA)
