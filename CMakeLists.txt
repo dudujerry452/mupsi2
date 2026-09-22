@@ -51,13 +51,15 @@ add_library(mupsi_core STATIC ${CORE_SOURCES})
 target_include_directories(mupsi_core PUBLIC ${CMAKE_SOURCE_DIR}/src)
 if(MUPSI_HAS_CUDA)
   # 标记core files
-  set_source_files_properties(${CORE_SOURCES} PROPERTIES LANGUAGE CUDA)
-  # 标记.cpp也为device
-  set_source_files_properties(${CORE_SOURCES} PROPERTIES COMPILE_OPTIONS "-x;cu")
-  # 设置core为CUDA语言
-  set_target_properties(mupsi_core PROPERTIES LINKER_LANGUAGE CUDA)
-  # 允许跨库调用
-  set_target_properties(mupsi_core PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  set_source_files_properties(${CORE_SOURCES} PROPERTIES 
+    LANGUAGE CUDA
+    COMPILE_OPTIONS "-x;cu;-dc"
+  )
+  # 设置core为CUDA语言, 允许跨库调用
+  set_target_properties(mupsi_core PROPERTIES 
+    LINKER_LANGUAGE CUDA
+    CUDA_SEPARABLE_COMPILATION ON
+  )
 
 endif()
 
@@ -69,6 +71,10 @@ if(NOT MUPSI_HAS_CUDA)
 else()
 # ——— CUDA 后端库(kernels/*.cu, 检测到 nvcc 才编译)———
   file(GLOB_RECURSE CUDA_SOURCES CONFIGURE_DEPENDS src/kernels/*.cu src/host/*.cpp)
+  set_source_files_properties(${CORE_SOURCES} PROPERTIES 
+    LANGUAGE CUDA
+    COMPILE_OPTIONS "-x;cu;-dc"
+  )
   add_library(mupsi_backend_cuda STATIC ${CUDA_SOURCES})
   target_link_libraries(mupsi_backend_cuda PUBLIC mupsi_core mupsi_header)
   # 允许跨库调用
@@ -86,10 +92,11 @@ endif()
 
 # ——— 可执行文件:链接所有可用后端 ———
 add_executable(mupsi src/main.cpp)
-target_link_libraries(mupsi PRIVATE mupsi_core mupsi_header nlohmann_json::nlohmann_json)
+target_link_libraries(mupsi PRIVATE mupsi_header mupsi_core nlohmann_json::nlohmann_json)
 if(NOT MUPSI_HAS_CUDA)
   target_link_libraries(mupsi PRIVATE mupsi_backend_cpu)
 else()
+  set_target_properties(mupsi PROPERTIES LINKER_LANGUAGE CUDA)
   target_link_libraries(mupsi PRIVATE mupsi_backend_cuda)
   target_compile_definitions(mupsi PRIVATE MUPSI_USE_CUDA=1)
 endif()
