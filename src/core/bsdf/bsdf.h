@@ -4,7 +4,7 @@
 
 namespace mps {
 
-  enum class BsdfType: u32 {
+  enum class BsdfType: u16 {
     Lambertain, 
     Specular
   }; 

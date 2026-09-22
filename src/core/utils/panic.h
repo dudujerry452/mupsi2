@@ -8,6 +8,8 @@
         } while(0)
 #else
     #include <cstdlib>
+    #include <stdio.h>
+    #include <cstdio>
     #define lpanic(fmt, ...) \
         do { \
             std::fprintf(stderr, "[CPU FATAL] " fmt "\n", ##__VA_ARGS__); \
