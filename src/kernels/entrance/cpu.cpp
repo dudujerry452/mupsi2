@@ -4,7 +4,7 @@
 namespace mps::kernels {
 
   void Entrance<Backend::CPU>::run() {
-    llog("Use Backend: CPU");
+    mplog("Use Backend: CPU");
 
   }
 

@@ -4,7 +4,7 @@
 namespace mps::kernels {
 
   void Entrance<Backend::CUDA>::run() {
-    llog("Use Backend: CUDA");
+    mplog("Use Backend: CUDA");
 
   }
 

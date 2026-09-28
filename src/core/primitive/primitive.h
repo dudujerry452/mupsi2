@@ -28,6 +28,7 @@ namespace mps::core {
     u16 texId;
     vec3f wpos;
     vec4f quater; 
+    f32 scale; 
   }; 
 
   // ---------- primitive definations ------------

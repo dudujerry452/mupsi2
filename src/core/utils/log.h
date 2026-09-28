@@ -25,7 +25,7 @@ namespace mps {
     #define CURRENT_FUNCTION __func__ // 保底方案
 #endif
 
-#define llog(fmt, ...) \
+#define mplog(fmt, ...) \
     mps::_impl_log(CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
-#define llogtag(tag, fmt, ...) \
+#define mplogtag(tag, fmt, ...) \
     mps::_impl_log(tag, fmt, ##__VA_ARGS__)
