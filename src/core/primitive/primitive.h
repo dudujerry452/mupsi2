@@ -65,13 +65,13 @@ namespace mps::core {
     static constexpr u32 aligned_size = (raw_size+15)&(~15);  
   };
 
-  inline u32 alignedSizeOfPrimitive(PrimitiveType type) {
+  MPHD MPINL u32 alignedSizeOfPrimitive(PrimitiveType type) {
     #define DEF_TRAIT(name) \
     case PrimitiveType::name: {return PrimitiveTrait<PrimitiveType::name>::aligned_size; }
 
     switch(type) {
       ENUM_PRIMITIVE_FUNC(DEF_TRAIT)
-      default: { lpanic("Primitive not implemented");  } // panic
+      default: { mppanic("Primitive not implemented");  } // panic
     }
 
     #undef DEF_TRAIT

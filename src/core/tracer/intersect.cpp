@@ -22,16 +22,20 @@ namespace mps::core {
       mps::square(mps::dot(D, V)) - 
       (mps::dot(V,V) - mps::square(R))
     );
-    
+
     if(disc < 0.0f) return hr; 
 
     f32 k = (mps::dot(D, V)); 
-    f32 t1 = -k + disc, t2 = -k - disc; 
+    f32 t1 = -k - disc, t2 = -k + disc; 
+
+    if(t2 < 0.0f) return hr; 
+    
     f32 t = (t1 >= 0.0f) ? t1 : t2;  
     vec3f p = O + D*t; 
     vec3f ng = mps::normalize(p-C); 
     ng = (t1 >= 0.0f) ? ng : -ng; 
 
+    hr.hit = true; 
     hr.p = p; 
     hr.ng = ng; 
     hr.t = t; 

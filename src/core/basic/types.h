@@ -14,7 +14,12 @@ namespace mps {
 
   struct vec2f {f32 x,y; }; 
   struct vec3f {f32 x,y,z; };
-  struct vec4f {f32 x,y,z,w; };  
+  struct vec4f {
+    union {
+      struct {f32 x,y,z; };
+      vec3f u; 
+    }; 
+    f32 w; };  
 
   enum class Backend: u16 {
     CPU,

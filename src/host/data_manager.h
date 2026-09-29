@@ -7,7 +7,7 @@
 namespace mps::host {
 
   // return starts(heap) flat(bytes)
-  std::tuple<u32, u32*, void*> flatten_primitive(const std::vector<void*>& prims); 
+  MPH std::tuple<u32, u32*, void*> flatten_primitive(const std::vector<void*>& prims); 
   
 
 }

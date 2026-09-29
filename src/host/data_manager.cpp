@@ -9,7 +9,7 @@
 
 namespace mps::host {
 
-  std::tuple<u32, u32*, void*> flatten_primitive(const std::vector<void*>& prims) {
+  MPH std::tuple<u32, u32*, void*> flatten_primitive(const std::vector<void*>& prims) {
     if(prims.empty()) return {0, nullptr, nullptr}; 
     
     u32 num = prims.size(); 
