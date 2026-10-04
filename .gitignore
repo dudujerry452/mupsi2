@@ -15,4 +15,6 @@
 *.obj
 *.hdr
 
+*.ppm
+
 /docs

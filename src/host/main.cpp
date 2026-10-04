@@ -7,6 +7,8 @@
 #include "core/utils/log.h"
 #include "core/primitive/primitive.h"
 
+#include "host/ppm_util.h"
+
 #if defined(MUPSI_USE_CUDA)
 constexpr mps::Backend ACTIVE_BACKEND = mps::Backend::CUDA;
 #else
@@ -16,5 +18,8 @@ constexpr mps::Backend ACTIVE_BACKEND = mps::Backend::CPU;
 int main() {
 
     mps::kernels::Entrance<ACTIVE_BACKEND>::run(); 
+
+
+    
     return 0;
 }

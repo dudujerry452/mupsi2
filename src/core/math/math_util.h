@@ -6,6 +6,14 @@
 
 namespace mps {
 
+  constexpr f32 pi           = 3.14159265358979323846f;
+  constexpr f32 two_pi       = 6.28318530717958647692f;
+  constexpr f32 half_pi      = 1.57079632679489661923f;
+
+  constexpr f32 inv_pi       = 0.31830988618379067154f; 
+  constexpr f32 inv_two_pi   = 0.15915494309189533577f; 
+
+
   MPHD MPINL f32 rsqrtf(f32 x) {
     #if defined(__CUDA_ARCH__)
       return ::rsqrtf(x); 
@@ -39,6 +47,38 @@ namespace mps {
       return std::sinf(x); 
     #endif
   }
+  
+  MPHD MPINL f32 atan2f(f32 y, f32 x) {
+    #if defined(__CUDA_ARCH__) 
+      return ::atan2f(y, x); 
+    #else 
+      return std::atan2(y, x); 
+    #endif
+  }
+
+  MPHD MPINL f32 acosf(f32 x) {
+        #if defined(__CUDA_ARCH__) 
+      return ::acosf(x); 
+    #else 
+      return std::acos(x); 
+    #endif
+  }
+
+  MPHD MPINL f32 asinf(f32 x) {
+        #if defined(__CUDA_ARCH__) 
+      return ::asinf(x); 
+    #else 
+      return std::asin(x); 
+    #endif
+  }
+
+  MPHD MPINL f32 fabsf(f32 x) {
+  #ifdef __CUDA_ARCH__
+      return ::fabsf(x);
+  #else
+      return std::fabs(x); 
+  #endif
+  }
 
   MPHD MPINL vec3f operator+(vec3f a, vec3f b) {return {a.x+b.x, a.y+b.y, a.z+b.z}; }
   MPHD MPINL vec3f operator-(vec3f a, vec3f b) {return {a.x-b.x, a.y-b.y, a.z-b.z}; }
@@ -67,9 +107,9 @@ namespace mps {
     return {a.x*invnorm, a.y*invnorm, a.z*invnorm, a.w*invnorm}; 
   }
 
-  MPHD MPINL vec4f quat_init(f32 theta, vec3f axis) { f32 ht = theta*0.5f; return { axis.x*ht, axis.y*ht, axis.z*ht,  mps::cosf(ht)}; }
-  MPHD MPINL vec3f quat_rotate(vec3f v, vec4f q) {return {v + mps::cross(2.0f*q.u, mps::cross(q.u, v) + q.w*v)}; }
-  MPHD MPINL vec3f quat_rotate_inv(vec3f v, vec4f q) {return {v - mps::cross(2.0f*q.u, -mps::cross(q.u, v) + q.w*v)}; }
+  MPHD MPINL vec4f quat_init(vec3f axis, f32 theta) { f32 ht = theta*0.5f; return { axis.x*ht, axis.y*ht, axis.z*ht,  mps::cosf(ht)}; }
+  MPHD MPINL vec3f quat_rotate(vec4f q, vec3f v) {return {v + mps::cross(2.0f*q.u, mps::cross(q.u, v) + q.w*v)}; }
+  MPHD MPINL vec3f quat_rotate_inv(vec4f q, vec3f v) {return {v - mps::cross(2.0f*q.u, -mps::cross(q.u, v) + q.w*v)}; }
   MPHD MPINL vec4f quat_normalize(vec4f a) {
     f32 invnorm2 = 1.0f / mps::norm2(a); 
     return {a.x*invnorm2, a.y*invnorm2, a.z*invnorm2, a.w*invnorm2}; 
