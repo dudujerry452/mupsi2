@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/primitive/primitive.h"
+#include "core/math/math_util.h"
 
 namespace mps::core {
 
