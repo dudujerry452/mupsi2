@@ -32,7 +32,7 @@ namespace mps {
     byte r,g,b; 
   }; 
 
-  struct RGB_Radiance {
+  struct RGB_F32 {
     f32 r,g,b; 
   }; 
 

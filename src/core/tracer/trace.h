@@ -6,6 +6,6 @@
 
 namespace mps::core {
 
-  MPHD RGB_Radiance trace(const Ray ray, const SceneDevice scene); 
+  MPHD RGB_F32 trace(const Ray ray, const SceneDevice scene); 
 
 }

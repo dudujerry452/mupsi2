@@ -21,9 +21,9 @@ namespace mps::host {
     mps::host::save_ppm("test.ppm", fb);
     delete[] fb.pixels;
   */
-  MPHD MPINL RGB_8Bit radiance_to_8bit(RGB_8Bit rgb); 
+  MPH MPINL RGB_8Bit radiance_to_8bit(RGB_8Bit rgb); 
 
-  MPH void framebuffer_radiance_to_8bit(const FrameBuffer<RGB_8Bit>& fb, FrameBuffer<RGB_Radiance>& ret); 
+  MPH void framebuffer_radiance_to_8bit(const FrameBuffer<RGB_8Bit>& fb, FrameBuffer<RGB_F32>& ret); 
 
   MPH void save_ppm(const std::string& filename, const FrameBuffer<RGB_8Bit>& fb); 
 

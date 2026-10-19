@@ -80,6 +80,14 @@ namespace mps {
   #endif
   }
 
+  MPHD MPINL f32 powf(const f32 x, const f32 y) {
+    #if defined(__CUDA_ARCH__)
+      return ::powf(x, y);
+    #else
+      return std::pow(x, y);
+    #endif
+  }
+
   MPHD MPINL vec3f operator+(const vec3f a, const vec3f b) {return {a.x+b.x, a.y+b.y, a.z+b.z}; }
   MPHD MPINL vec3f operator-(const vec3f a, const vec3f b) {return {a.x-b.x, a.y-b.y, a.z-b.z}; }
   MPHD MPINL vec3f operator*(const vec3f a, const vec3f b) {return {a.x*b.x, a.y*b.y, a.z*b.z}; }
