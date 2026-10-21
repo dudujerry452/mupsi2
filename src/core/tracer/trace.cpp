@@ -86,6 +86,11 @@ namespace mps::core {
           ray.dir = bs.wi;
           ray.min = ctx.settings.nearEps;
           ray.max = 1e30f;
+
+          // Russian roulette on the path throughput.
+          f32 survival = mps::minf(1.0f, mps::maxf(throughput.r, mps::maxf(throughput.g, throughput.b)));
+          if (bounce > 2 && rng.next1D() > survival) break;
+          if (survival > 0.0f) throughput = throughput / survival;
           continue;
         } else {
           inMedium = false;   // exited the medium; fall through to hard surfaces
@@ -115,8 +120,12 @@ namespace mps::core {
 
       if (bt == BsdfType::Null) {
         // Transparent boundary: no shading, specularness unchanged.
+      } else if (bt == BsdfType::Specular) {
+        // Perfect mirror: no NEE (delta lobe); the reflected ray carries the
+        // lighting. Specularness is preserved so a direct light hit still emits.
+        throughput = throughput * bs.weight;   // {1,1,1}
       } else {
-        // Opaque surface.
+        // Opaque Lambertian surface.
         const RGB_F32 albedo = lambertianAlbedo();
         if (hr.lightId != NO_LIGHT && wasSpecular) {
           // Directly viewing a light through a specular path: emit it (NEE at the
@@ -135,6 +144,11 @@ namespace mps::core {
       ray.dir = bs.wi;
       ray.min = ctx.settings.nearEps;
       ray.max = 1e30f;
+
+      // Russian roulette on the path throughput.
+      f32 survival = mps::minf(1.0f, mps::maxf(throughput.r, mps::maxf(throughput.g, throughput.b)));
+      if (bounce > 2 && rng.next1D() > survival) break;
+      if (survival > 0.0f) throughput = throughput / survival;
     }
 
     return emission;

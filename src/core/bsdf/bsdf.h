@@ -6,7 +6,7 @@
 
 namespace mps::core {
 
-  enum class BsdfType : u16 { Null = 0, Lambertian = 1 };
+  enum class BsdfType : u16 { Null = 0, Lambertian = 1, Specular = 2 };
 
   struct BsdfSample {
     vec3f wi;       // scattered direction (towards next vertex)

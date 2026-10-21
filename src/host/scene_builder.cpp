@@ -43,6 +43,10 @@ namespace mps::host {
     cfg.host.addSphere({120.0f, 60.0f, -280.0f}, 60.0f,
                        u16(core::BsdfType::Lambertian), core::NO_MEDIUM, core::NO_LIGHT);
 
+    // Specular sphere: tests the delta-BSDF mirror path.
+    cfg.host.addSphere({-60.0f, 60.0f, -340.0f}, 75.0f,
+                       u16(core::BsdfType::Specular), core::NO_MEDIUM, core::NO_LIGHT);
+
     // ——— area lights (sampled by NEE) ———
     cfg.host.addLight({-250.0f, 350.0f, -350.0f}, 70.0f, {40.0f, 36.0f, 30.0f});  // key
     cfg.host.addLight({ 300.0f,  80.0f, -200.0f}, 45.0f, {15.0f, 12.0f, 10.0f});  // fill
