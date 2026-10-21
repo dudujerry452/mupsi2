@@ -35,6 +35,7 @@ int main(int argc, char** argv) {
   const std::string modeArg = (argc > 4) ? argv[4] : "";
   const std::string bsdfArg = (argc > 5) ? argv[5] : "";
   const i32 sppArg = (argc > 6) ? std::atoi(argv[6]) : 0;
+  const f32 sigmaArg = (argc > 7) ? std::atof(argv[7]) : 0.0f;
 
   // 1. host staging
   mps::host::SceneConfig cfg;
@@ -64,6 +65,7 @@ int main(int argc, char** argv) {
   }
 
   if (sppArg > 0) cfg.spp = sppArg;
+  if (sigmaArg > 0.0f) cfg.medium.sigma = sigmaArg;
 
   // 2. flatten to device POD arrays (CPU: plain heap; CUDA: cudaMalloc in the shell)
   mps::core::SceneDevice device = mps::host::toDevice(cfg.host);
