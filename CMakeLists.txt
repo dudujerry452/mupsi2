@@ -93,7 +93,7 @@ endif()
 # ——— 可执行文件:链接所有可用后端 ———
 file(GLOB_RECURSE HOST_SOURCES CONFIGURE_DEPENDS src/host/*.cpp)
 add_executable(mupsi ${HOST_SOURCES})
-target_link_libraries(mupsi PRIVATE mupsi_header mupsi_core nlohmann_json::nlohmann_json)
+target_link_libraries(mupsi PRIVATE mupsi_header mupsi_core nlohmann_json::nlohmann_json OpenMP::OpenMP_CXX)
 if(NOT MUPSI_HAS_CUDA)
   target_link_libraries(mupsi PRIVATE mupsi_backend_cpu)
 else()

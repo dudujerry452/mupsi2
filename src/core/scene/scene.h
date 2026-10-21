@@ -22,6 +22,13 @@ namespace mps::core {
     u32*      bvhTriIndices  = nullptr;  // global face indices
     vec3f*    vertexNormals  = nullptr;  // angle-weighted pseudo-normals (parallel to vertices)
 
+    // Sparse narrow-band SDF mean (used when the GP medium has MeanType::Voxel).
+    u8*       voxelSignGrid  = nullptr;  // res^3 bytes
+    u32*      voxelBandIndex = nullptr;  // sorted in-band node indices
+    f32*      voxelBandValue = nullptr;  // in-band signed distances
+    u32 voxelRes       = 0;
+    u32 voxelBandCount = 0;
+
     // Element counts of the shared arrays above (needed for backend upload).
     u32 numVertices      = 0;
     u32 numFaces         = 0;   // count of u32 entries (3 × triangles)
@@ -39,6 +46,12 @@ namespace mps::core {
     std::vector<BVHNode> bvhNodes;
     std::vector<u32>     bvhTriIndices;
     std::vector<vec3f>  vertexNormals;   // angle-weighted pseudo-normals (parallel to vertices)
+
+    // Sparse narrow-band SDF mean (MeanType::Voxel).
+    std::vector<u8>  voxelSignGrid;
+    std::vector<u32> voxelBandIndex;
+    std::vector<f32> voxelBandValue;
+    u32 voxelRes = 0;
 
     void addSphere(const vec3f& center, f32 radius, u16 bsdfId, u16 mediumId, u16 lightId);
     // vertices/faces must be world-space.

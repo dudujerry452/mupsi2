@@ -24,7 +24,7 @@ namespace mps::core {
   };
 
   enum class MediumType : u16 { SDF = 0, GP = 1 };
-  enum class MeanType   : u16 { Sphere = 0, Mesh = 1 };
+  enum class MeanType   : u16 { Sphere = 0, Mesh = 1, Voxel = 2 };
   enum class GPMode     : u16 { SingleRealization = 0, RenewalPlus = 1 };
 
   // POD medium parameters (device-friendly). The GP medium wraps a mean
@@ -39,6 +39,10 @@ namespace mps::core {
     // Mesh mean (used when meanType == MeanType::Mesh). Host/device pointers are
     // bound by the backend after scene upload.
     MeshMean meshMean;
+
+    // Sparse narrow-band SDF mean (used when meanType == MeanType::Voxel).
+    // Built on the host from the mesh, uploaded + re-bound like meshMean.
+    SparseSDFGrid voxelMean;
 
     // Bounding (wrapper) sphere: the medium only lives inside it, so ray
     // marching is clamped to the far intersection with this sphere.

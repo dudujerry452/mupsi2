@@ -16,4 +16,8 @@ namespace mps::host {
   // pointers; the CUDA shell re-binds these to device pointers itself.
   void bindMeshMean(core::Medium& m, const core::SceneDevice& dev, const core::Mesh& ref);
 
+  // Point a Voxel mean medium at the device's sparse-grid arrays (origin,
+  // cellSize and band are already set on m.voxelMean by the scene builder).
+  void bindVoxelMean(core::Medium& m, const core::SceneDevice& dev);
+
 }

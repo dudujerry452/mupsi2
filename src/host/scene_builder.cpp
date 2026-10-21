@@ -6,6 +6,7 @@
 #include "core/primitive/primitive.h"
 #include "core/utils/log.h"
 #include "host/obj_loader.h"
+#include "host/voxel_builder.h"
 
 namespace mps::host {
 
@@ -51,7 +52,7 @@ namespace mps::host {
 
   SceneConfig buildMeshGpScene(const std::string& objPath, i32 w, i32 h,
                                f32 dist, f32 targetRadius, core::GPMode mode,
-                               f32 sigma, f32 kernelRadius) {
+                               f32 sigma, f32 kernelRadius, bool useVoxel, u32 voxelRes) {
     SceneConfig cfg;
 
     cfg.settings.maxBounce = 10;
@@ -82,7 +83,7 @@ namespace mps::host {
     cfg.host.addMeshMean(worldVerts.data(), u32(worldVerts.size()), obj.faces.data(), nt);
     mplog("buildMeshGpScene: {} verts {} tris (scale {:.3f})", worldVerts.size(), nt, scale);
 
-    // ——— GP medium: mesh mean + sparse SE convolution noise ———
+    // ——— GP medium: mesh/voxel mean + sparse SE convolution noise ———
     core::Medium& m = cfg.medium;
     m.type         = core::MediumType::GP;
     m.meanType     = core::MeanType::Mesh;
@@ -95,6 +96,35 @@ namespace mps::host {
     m.impulseDensity = 3;
     m.gpMode       = mode;
     cfg.hasMedium  = true;
+
+    if (useVoxel) {
+      // World-space AABB of the auto-fitted mesh.
+      core::AABB worldBox = core::AABB::empty();
+      for (const vec3f& v : worldVerts) worldBox.extend(v);
+
+      // Build a temporary MeshMean over the host arrays (before toDevice).
+      core::MeshMean mm;
+      mm.vertices       = cfg.host.vertices.data();
+      mm.faces          = cfg.host.faces.data();
+      mm.bvhNodes       = cfg.host.bvhNodes.data();
+      mm.bvhTriIndices  = cfg.host.bvhTriIndices.data();
+      mm.vertexNormals  = cfg.host.vertexNormals.data();
+      mm.bvhRoot        = cfg.host.meshMeans[0].bvhRoot;
+      mm.bvhNodeOffset  = cfg.host.meshMeans[0].bvhNodeOffset;
+      mm.bvhTriOffset   = cfg.host.meshMeans[0].bvhTriOffset;
+
+      mps::host::VoxelGridHost vg = mps::host::buildSparseSDFGrid(mm, worldBox, voxelRes, 4.0f);
+      cfg.host.voxelRes       = vg.res;
+      cfg.host.voxelSignGrid  = std::move(vg.signGrid);
+      cfg.host.voxelBandIndex = std::move(vg.bandIndex);
+      cfg.host.voxelBandValue = std::move(vg.bandValue);
+
+      m.voxelMean.origin   = vg.origin;
+      m.voxelMean.cellSize = vg.cellSize;
+      m.voxelMean.band     = vg.band;
+      m.voxelMean.res      = vg.res;
+      m.meanType           = core::MeanType::Voxel;
+    }
 
     // ——— wrapper sphere (transparent, holds the medium) ———
     cfg.host.addSphere(pos, m.boundRadius, u16(core::BsdfType::Null), 0, core::NO_LIGHT);

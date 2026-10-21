@@ -14,14 +14,17 @@ namespace mps::core {
 
     MPHD MPINL f32 meanEval(const Medium& m, const vec3f& p) {
       if (m.meanType == MeanType::Mesh) return m.meshMean.eval(p);
+      if (m.meanType == MeanType::Voxel) return m.voxelMean.eval(p);
       return SphereMean{m.meanCenter, m.meanRadius}.eval(p);
     }
     MPHD MPINL vec3f meanGrad(const Medium& m, const vec3f& p) {
       if (m.meanType == MeanType::Mesh) return m.meshMean.gradient(p);
+      if (m.meanType == MeanType::Voxel) return m.voxelMean.gradient(p);
       return SphereMean{m.meanCenter, m.meanRadius}.gradient(p);
     }
     MPHD MPINL vec4f meanEvalGrad(const Medium& m, const vec3f& p) {
       if (m.meanType == MeanType::Mesh) return m.meshMean.evalGrad(p);
+      if (m.meanType == MeanType::Voxel) return m.voxelMean.evalGrad(p);
       return SphereMean{m.meanCenter, m.meanRadius}.evalGrad(p);
     }
 

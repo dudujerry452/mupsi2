@@ -29,6 +29,12 @@ namespace mps::host {
     dev.bvhTriIndices = copyArray(host.bvhTriIndices);
     dev.vertexNormals = copyArray(host.vertexNormals);
 
+    dev.voxelSignGrid  = copyArray(host.voxelSignGrid);
+    dev.voxelBandIndex = copyArray(host.voxelBandIndex);
+    dev.voxelBandValue = copyArray(host.voxelBandValue);
+    dev.voxelRes       = host.voxelRes;
+    dev.voxelBandCount = u32(host.voxelBandIndex.size());
+
     dev.numVertices      = u32(host.vertices.size());
     dev.numFaces         = u32(host.faces.size());
     dev.numBvhNodes      = u32(host.bvhNodes.size());
@@ -45,6 +51,9 @@ namespace mps::host {
     delete[] dev.bvhNodes;
     delete[] dev.bvhTriIndices;
     delete[] dev.vertexNormals;
+    delete[] dev.voxelSignGrid;
+    delete[] dev.voxelBandIndex;
+    delete[] dev.voxelBandValue;
     dev = core::SceneDevice{};
   }
 
@@ -57,6 +66,14 @@ namespace mps::host {
     m.meshMean.bvhRoot        = ref.bvhRoot;
     m.meshMean.bvhNodeOffset  = ref.bvhNodeOffset;
     m.meshMean.bvhTriOffset   = ref.bvhTriOffset;
+  }
+
+  void bindVoxelMean(core::Medium& m, const core::SceneDevice& dev) {
+    m.voxelMean.signGrid  = dev.voxelSignGrid;
+    m.voxelMean.bandIndex = dev.voxelBandIndex;
+    m.voxelMean.bandValue = dev.voxelBandValue;
+    m.voxelMean.bandCount = dev.voxelBandCount;
+    m.voxelMean.res       = dev.voxelRes;
   }
 
 }

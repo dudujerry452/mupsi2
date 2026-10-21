@@ -45,6 +45,8 @@ int main(int argc, char** argv) {
   //     the CUDA shell re-binds to device pointers after its own upload).
   if (cfg.medium.meanType == mps::core::MeanType::Mesh && !cfg.host.meshMeans.empty()) {
     mps::host::bindMeshMean(cfg.medium, device, cfg.host.meshMeans[0]);
+  } else if (cfg.medium.meanType == mps::core::MeanType::Voxel) {
+    mps::host::bindVoxelMean(cfg.medium, device);
   }
 
   mps::core::RenderContext ctx{device, cfg.medium, cfg.hasMedium, cfg.settings};

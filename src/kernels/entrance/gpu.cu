@@ -54,6 +54,9 @@ namespace mps::kernels {
     core::BVHNode* d_bvhNodes     = upload(h.bvhNodes, h.numBvhNodes);
     u32*          d_bvhTriIndices = upload(h.bvhTriIndices, h.numBvhTriIndices);
     vec3f*        d_vertexNormals = upload(h.vertexNormals, h.numVertices);
+    u8*           d_voxelSignGrid  = upload(h.voxelSignGrid, h.voxelRes * h.voxelRes * h.voxelRes);
+    u32*          d_voxelBandIndex = upload(h.voxelBandIndex, h.voxelBandCount);
+    f32*          d_voxelBandValue = upload(h.voxelBandValue, h.voxelBandCount);
 
     core::SceneDevice d_scene;
     d_scene.numSpheres = h.numSpheres;
@@ -65,12 +68,17 @@ namespace mps::kernels {
     d_scene.bvhNodes       = d_bvhNodes;
     d_scene.bvhTriIndices  = d_bvhTriIndices;
     d_scene.vertexNormals  = d_vertexNormals;
+    d_scene.voxelSignGrid  = d_voxelSignGrid;
+    d_scene.voxelBandIndex = d_voxelBandIndex;
+    d_scene.voxelBandValue = d_voxelBandValue;
+    d_scene.voxelRes       = h.voxelRes;
+    d_scene.voxelBandCount = h.voxelBandCount;
     d_scene.numVertices      = h.numVertices;
     d_scene.numFaces         = h.numFaces;
     d_scene.numBvhNodes      = h.numBvhNodes;
     d_scene.numBvhTriIndices = h.numBvhTriIndices;
 
-    // ——— 2. medium: re-bind mesh-mean pointers to device memory ———
+    // ——— 2. medium: re-bind mesh-mean / voxel-mean pointers to device memory ———
     core::Medium d_medium = ctx.medium;
     if (d_medium.meanType == core::MeanType::Mesh) {
       d_medium.meshMean.vertices      = d_scene.vertices;
@@ -78,6 +86,12 @@ namespace mps::kernels {
       d_medium.meshMean.bvhNodes      = d_scene.bvhNodes;
       d_medium.meshMean.bvhTriIndices = d_scene.bvhTriIndices;
       d_medium.meshMean.vertexNormals = d_scene.vertexNormals;
+    } else if (d_medium.meanType == core::MeanType::Voxel) {
+      d_medium.voxelMean.signGrid  = d_scene.voxelSignGrid;
+      d_medium.voxelMean.bandIndex = d_scene.voxelBandIndex;
+      d_medium.voxelMean.bandValue = d_scene.voxelBandValue;
+      d_medium.voxelMean.bandCount = d_scene.voxelBandCount;
+      d_medium.voxelMean.res       = d_scene.voxelRes;
     }
 
     // ——— 3. output framebuffer (device) ———
@@ -103,6 +117,9 @@ namespace mps::kernels {
     cudaFree(d_bvhNodes);
     cudaFree(d_bvhTriIndices);
     cudaFree(d_vertexNormals);
+    cudaFree(d_voxelSignGrid);
+    cudaFree(d_voxelBandIndex);
+    cudaFree(d_voxelBandValue);
 
     mplogtag("cuda", "render {}x{} spp={} done", w, hh, spp);
   }

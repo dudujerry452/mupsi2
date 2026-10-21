@@ -24,11 +24,13 @@ namespace mps::host {
 
   // Generic: wrap any OBJ in a GP implicit surface. The mesh is auto-fit into a
   // bounding sphere of `targetRadius` centered at (0,0,-dist); camera looks
-  // straight down -z from the origin.
+  // straight down -z from the origin. When useVoxel is true the mesh SDF is
+  // precomputed into a sparse narrow-band grid (MeanType::Voxel, O(1) queries).
   SceneConfig buildMeshGpScene(const std::string& objPath, i32 w, i32 h,
                                f32 dist = 500.0f, f32 targetRadius = 150.0f,
                                core::GPMode mode = core::GPMode::SingleRealization,
-                               f32 sigma = 1.0f, f32 kernelRadius = 1.0f);
+                               f32 sigma = 1.0f, f32 kernelRadius = 1.0f,
+                               bool useVoxel = true, u32 voxelRes = 256);
 
   // Convenience scenes (paths under ~/models).
   SceneConfig buildSpotGpScene (i32 w = 256, i32 h = 256);
