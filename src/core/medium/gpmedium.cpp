@@ -178,7 +178,11 @@ namespace mps::core {
         out.t = t;
         out.p = ray.at(t);
         vec4f f = gpEvalGradCondAlong(ray.o, ray.dir, t, seed, m, c);
-        out.normal = mps::normalize(vec3f{f.y, f.z, f.w});
+        vec3f grad{f.y, f.z, f.w};
+        const f32 glen = mps::norm(grad);
+        // Guard against a near-zero total gradient (rare, but a single frozen
+        // realization would otherwise produce NaN normals -> fireflies).
+        out.normal = (glen > 1e-6f) ? grad * (1.0f / glen) : meanGrad(m, out.p);
         return true;
       }
 
