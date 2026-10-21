@@ -8,6 +8,14 @@ namespace mps::core {
   // h(s,p) = exp(-‖p-s‖² / L²),  L² = lengthScale·lengthScale  (scalar, same as
   // the original implementation's squaredNorm()).
   struct SEKernel {
+    // Compile-time flag: this kernel is isotropic (a single scalar length scale
+    // L² = lengthScale·lengthScale). By subdomain invariance (gpis-1.md「子域不变性」)
+    // the GP restricted to a ray is a valid 1D GP with the same covariance, so the
+    // marching may replace the 3D noise (27 cells) with a 1D noise (3 cells).
+    // An anisotropic kernel ψ_ani(p) = ψ_iso(Mp) would set this false and always
+    // fall back to 3D noise (the 1D branch compiles out via if constexpr).
+    static constexpr bool isotropic = true;
+
     f32   sigma;
     vec3f lengthScale;
     f32   kernelRadius;

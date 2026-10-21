@@ -36,7 +36,7 @@ namespace mps::core {
                                      rng.next1D(), rng.next1D());
           throughput = throughput * bs.weight;
 
-          cond = sampleCondition(ms, ctx.medium, seed);
+          cond = sampleCondition(ms, ctx.medium, seed, ray.dir);
 
           ray.o = ms.p + ms.normal * ctx.settings.eps;
           ray.dir = bs.wi;

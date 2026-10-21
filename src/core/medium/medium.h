@@ -74,6 +74,6 @@ namespace mps::core {
   // implicit surface inside [ray.min, ray.max]; false if it exits.
   MPHD bool    sampleDistance(const Ray& ray, const Medium& m, const GPConditioningState& c, u32 seed, MediumSample& out);
   MPHD RGB_F32 transmittance (const Ray& ray, const Medium& m, const GPConditioningState& c, u32 seed);
-  MPHD GPConditioningState sampleCondition(const MediumSample& s, const Medium& m, u32 seed);
+  MPHD GPConditioningState sampleCondition(const MediumSample& s, const Medium& m, u32 seed, const vec3f& rayDir);
 
 }

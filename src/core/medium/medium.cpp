@@ -16,8 +16,8 @@ namespace mps::core {
     return gpTransmittance(ray, m, c, seed);
   }
 
-  MPHD GPConditioningState sampleCondition(const MediumSample& s, const Medium& m, u32 seed) {
-    return gpSampleCondition(s, m, seed);
+  MPHD GPConditioningState sampleCondition(const MediumSample& s, const Medium& m, u32 seed, const vec3f& rayDir) {
+    return gpSampleCondition(s, m, seed, rayDir);
   }
 
 }

@@ -23,6 +23,13 @@ namespace mps::core {
       return lambda * mps::powf(0.5f * mps::pi * L2, 1.5f);
     }
 
+    // λ₁ · (πL²/2)^{1/2}, the variance of the raw 1D field along a ray.
+    MPHD f32 variance1D() const {
+      f32 L2 = mps::dot(kernel.lengthScale, kernel.lengthScale);
+      f32 lambda = f32(pointsPerCell) / cellSize;
+      return lambda * mps::sqrtf(0.5f * mps::pi * L2);
+    }
+
     // Un-normalized Σ wᵢ h(sᵢ,p) and its gradient (vec4f{ψ, ∇ψ}).
     MPHD vec4f evalRaw(const vec3f& p, u32 seed) const;
 
@@ -31,6 +38,11 @@ namespace mps::core {
       f32 scale = kernel.sigma / mps::sqrtf(variance());
       return evalRaw(p, seed) * scale;
     }
+
+    // 1D noise along a ray (isotropic kernels only): vec2f{ψ, ∂ψ/∂t} at distance
+    // t along the ray. Same normalization as eval(), so ψ has covariance
+    // exp(-r²/(2L²)) restricted to the ray (subdomain invariance).
+    MPHD vec2f eval1D(f32 t, u32 seed) const;
   };
 
 }

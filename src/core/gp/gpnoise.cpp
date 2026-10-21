@@ -52,4 +52,37 @@ namespace mps::core {
     return acc;
   }
 
+  MPHD vec2f SparseConvNoise::eval1D(f32 t, u32 seed) const {
+    // Grid cell containing t along the ray.
+    const f32 tGrid = t / cellSize;
+    const f32 frac  = tGrid - mps::floorf(tGrid);
+    const i32 ci    = i32(mps::floorf(tGrid));
+
+    const f32 L2       = mps::dot(kernel.lengthScale, kernel.lengthScale);
+    const f32 support2 = cellSize * cellSize;   // compact support radius = cellSize
+
+    f32 val = 0.0f, gradT = 0.0f;
+
+    // 3 cells along the ray (dx = -1, 0, 1) — the 1D analogue of the 3×3×3
+    // neighborhood. Matches paper §7 (3^d → 3^1) and the reference cell1D.
+    for (i32 dx = -1; dx <= 1; ++dx) {
+      const i32 cellIdx = ci + dx;
+      Random rng(make_seed(cellIdx, seed));
+      for (u32 k = 0; k < pointsPerCell; ++k) {
+        const f32 ti = rng.next1D();                                   // impulse position in cell
+        const f32 w  = (rng.next1D() < 0.5f) ? -1.0f : 1.0f;
+        const f32 dt = (frac - f32(dx) - ti) * cellSize;               // world distance along ray
+
+        if (dt * dt >= support2) continue;                             // compact-support cull
+
+        const f32 h = mps::expf(-(dt * dt) / L2);
+        val   += w * h;
+        gradT += w * h * (-2.0f / L2) * dt;
+      }
+    }
+
+    const f32 scale = kernel.sigma / mps::sqrtf(variance1D());
+    return {val * scale, gradT * scale};
+  }
+
 }
