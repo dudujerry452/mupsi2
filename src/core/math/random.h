@@ -35,7 +35,9 @@ namespace mps::core {
 
     MPHD Random(u64 seed) : state(seed), oldState(seed) {
       if (state == 0) state = 1;
-      nextI(); nextI(); // warmup
+      // No warmup: callers seed with a well-mixed hash (make_seed/xxhash), and the
+      // PCG output permutation mixes immediately. Matches the original mupsi and
+      // the paper's Algorithm 1 (RNG(HASH(seed, cellIndex)) -> draw).
     }
     MPHD void setState(u64 s) { state = s; if (state == 0) state = 1; }
 
