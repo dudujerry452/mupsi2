@@ -21,11 +21,13 @@ constexpr Backend ACTIVE_BACKEND = Backend::CPU;
 int main(int argc, char** argv) {
   mplog("mupsi2 renderer starting");
 
-  // CLI: mupsi [scene] [width] [height]
+  // CLI: mupsi [scene] [width] [height] [single|renewal]
   //   scene ∈ {sphere, spot, bunny, dragon}  (default: spot)
+  //   [single|renewal] overrides the scene's default GPMode.
   const std::string scene = (argc > 1) ? argv[1] : "spot";
   const i32 w = (argc > 2) ? std::atoi(argv[2]) : 256;
   const i32 h = (argc > 3) ? std::atoi(argv[3]) : w;
+  const std::string modeArg = (argc > 4) ? argv[4] : "";
 
   // 1. host staging
   mps::host::SceneConfig cfg;
@@ -35,6 +37,14 @@ int main(int argc, char** argv) {
   else if (scene == "dragon") cfg = mps::host::buildDragonGpScene(w, h);
   else {
     std::cerr << "unknown scene '" << scene << "' (use sphere|spot|bunny|dragon)\n";
+    return 1;
+  }
+
+  // Override the GP memory model (for the 7.1 test matrix).
+  if (modeArg == "single")       cfg.medium.gpMode = core::GPMode::SingleRealization;
+  else if (modeArg == "renewal") cfg.medium.gpMode = core::GPMode::RenewalPlus;
+  else if (!modeArg.empty()) {
+    std::cerr << "unknown mode '" << modeArg << "' (use single|renewal)\n";
     return 1;
   }
 
