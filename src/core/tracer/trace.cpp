@@ -8,43 +8,79 @@ namespace mps::core {
 
   namespace {
 
-    // Direct lighting via next-event estimation (Tungsten-style light sampling):
-    // importance-sample a light by approximate radiance, sample a direction to a
-    // point on its area (spherical cap), evaluate the diffuse BRDF, and attenuate
-    // by a shadow ray (GP medium transmittance + hard-surface occlusion).
-    MPHD RGB_F32 nextEventEstimate(const vec3f& p, const vec3f& n, const SceneDevice& scene,
-                                   const Medium& m, const GPConditioningState& c, u32 seed,
+    // Closest hit skipping transparent (Null) primitives — walks through the
+    // wrapped-medium boundary so a shadow/BSDF ray can reach a light behind it.
+    MPHD bool firstOpaqueHit(const Ray& ray, const SceneDevice& s, HitRecord& out) {
+      Ray r = ray;
+      for (i32 k = 0; k < 8; ++k) {
+        HitRecord hr = sceneIntersect(r, s);
+        if (!hr.hit) return false;
+        if (hr.bsdfId != u16(BsdfType::Null)) { out = hr; return true; }
+        r.o   = ray.o + ray.dir * (hr.t + EPS_SURFACE);
+        r.min = EPS_NEAR;
+      }
+      return false;
+    }
+
+    // Direct lighting via next-event estimation with MIS (paper Algorithm 4 /
+    // Tungsten TraceBase::sampleDirect): the light-sampled and BSDF-sampled
+    // strategies are combined with the power heuristic.
+    MPHD RGB_F32 nextEventEstimate(const vec3f& p, const vec3f& n, const vec3f& wo,
+                                   const SceneDevice& scene, const Medium& m,
+                                   const GPConditioningState& c, u32 seed,
                                    bool inMedium, Random& rng) {
       if (scene.numLights == 0) return {0.0f, 0.0f, 0.0f};
+      const RGB_F32 albedo = lambertianAlbedo();
+      RGB_F32 L{0.0f, 0.0f, 0.0f};
 
+      // —— strategy 1: light sampling ——
       f32 pickWeight;
       const i32 li = chooseLight(scene.lights, scene.numLights, p, rng, pickWeight);
-      if (li < 0) return {0.0f, 0.0f, 0.0f};
-
-      LightSample ls;
-      if (!sampleLightDirect(p, scene.lights[li], rng, ls)) return {0.0f, 0.0f, 0.0f};
-
-      const f32 cosTheta = mps::dot(ls.d, n);
-      if (cosTheta <= 0.0f) return {0.0f, 0.0f, 0.0f};
-
-      const RGB_F32 f = lambertianAlbedo() * cosTheta;   // diffuse shading (albedo·cosθ)
-
-      // Shadow ray: GP medium transmittance, then hard-surface occlusion up to
-      // just short of the sampled light point.
-      Ray shadowRay;
-      shadowRay.o   = p + n * EPS_SURFACE;
-      shadowRay.dir = ls.d;
-      shadowRay.min = EPS_NEAR;
-      shadowRay.max = ls.dist * 0.99f;
-
-      RGB_F32 trans{1.0f, 1.0f, 1.0f};
-      if (inMedium) {
-        trans = transmittance(shadowRay, m, c, seed);
-        if (trans.r <= 0.0f && trans.g <= 0.0f && trans.b <= 0.0f) return {0.0f, 0.0f, 0.0f};
+      if (li >= 0) {
+        LightSample ls;
+        if (sampleLightDirect(p, scene.lights[li], rng, ls)) {
+          const f32 cosL = mps::dot(ls.d, n);
+          if (cosL > 0.0f) {
+            Ray sr;
+            sr.o = p + n * EPS_SURFACE; sr.dir = ls.d; sr.min = EPS_NEAR; sr.max = ls.dist * 0.99f;
+            RGB_F32 sh{1.0f, 1.0f, 1.0f};
+            if (inMedium) {
+              sh = transmittance(sr, m, c, seed);
+              if (sh.r <= 0.0f && sh.g <= 0.0f && sh.b <= 0.0f) sh = {0.0f, 0.0f, 0.0f};
+            }
+            if (!sceneOccluded(sr, scene, u32(li)) && (sh.r > 0.0f || sh.g > 0.0f || sh.b > 0.0f)) {
+              const f32 pdfB = bsdfPdf(BsdfType::Lambertian, wo, ls.d, n);
+              const f32 wL = powerHeuristic(ls.pdf, pdfB);
+              L += (albedo * cosL) * ls.radiance * sh * pickWeight * wL;
+            }
+          }
+        }
       }
-      if (sceneOccluded(shadowRay, scene, u32(li))) return {0.0f, 0.0f, 0.0f};
 
-      return f * ls.radiance * trans * pickWeight;
+      // —— strategy 2: BSDF sampling (cosine hemisphere) ——
+      {
+        const vec3f localWi = cosineSampleHemisphere({rng.next1D(), rng.next1D()});
+        const vec3f wi = TangentFrame(n).toGlobal(localWi);
+        const f32 cosB = localWi.z;
+        const f32 pdfB = cosineHemispherePdf(cosB);
+        if (cosB > 0.0f) {
+          Ray br;
+          br.o = p + n * EPS_SURFACE; br.dir = wi; br.min = EPS_NEAR; br.max = 1e30f;
+          RGB_F32 sh{1.0f, 1.0f, 1.0f};
+          if (inMedium) sh = transmittance(br, m, c, seed);
+
+          HitRecord hr;
+          if ((sh.r > 0.0f || sh.g > 0.0f || sh.b > 0.0f) &&
+              firstOpaqueHit(br, scene, hr) && hr.lightId != NO_LIGHT) {
+            const AreaLight& L2 = scene.lights[hr.lightId];
+            const f32 pdfL2 = lightDirectPdf(p, L2);
+            const f32 wB = powerHeuristic(pdfB, pdfL2);
+            L += (albedo * cosB) * (L2.emission * sh / pdfB) * wB;
+          }
+        }
+      }
+
+      return L;
     }
 
   } // namespace
@@ -71,8 +107,8 @@ namespace mps::core {
           // Hit the GP implicit surface; shade with the gradient as the normal.
           const RGB_F32 albedo = lambertianAlbedo();
           emission += throughput * (ambient * albedo +
-                                    nextEventEstimate(ms.p, ms.normal, ctx.scene, ctx.medium,
-                                                      cond, seed, true, rng));
+                                    nextEventEstimate(ms.p, ms.normal, -ray.dir,
+                                                      ctx.scene, ctx.medium, cond, seed, true, rng));
 
           // Scatter (Lambertian), then pin the surface for the next bounce.
           BsdfSample bs = bsdfSample(BsdfType::Lambertian, -ray.dir, ms.normal, {0.0f, 0.0f},
@@ -133,8 +169,8 @@ namespace mps::core {
           emission += throughput * ctx.scene.lights[hr.lightId].emission;
         } else {
           emission += throughput * (ambient * albedo +
-                                    nextEventEstimate(hr.p, hr.ng, ctx.scene, ctx.medium,
-                                                      cond, seed, false, rng));
+                                    nextEventEstimate(hr.p, hr.ng, -ray.dir,
+                                                      ctx.scene, ctx.medium, cond, seed, false, rng));
         }
         throughput = throughput * bs.weight;
         wasSpecular = false;

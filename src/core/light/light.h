@@ -61,6 +61,13 @@ namespace mps::core {
     return mps::two_pi * (1.0f - cosTheta) * em;  // cap solid angle * emission
   }
 
+  // Power heuristic (Veach) for MIS between two sampling strategies.
+  MPHD MPINL f32 powerHeuristic(f32 pdf0, f32 pdf1) {
+    const f32 p0 = pdf0 * pdf0, p1 = pdf1 * pdf1;
+    const f32 d = p0 + p1;
+    return d > 0.0f ? p0 / d : 0.5f;
+  }
+
   // Importance-sample a light by approximate radiance. Returns the light index
   // and sets `pickWeight` = 1 / P(chosen light) (multiply the estimator by it).
   // Two passes, no variable-length scratch — device friendly.
