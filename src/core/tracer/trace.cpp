@@ -109,17 +109,23 @@ namespace mps::core {
       if (inMedium) {
         MediumSample ms;
         if (sampleDistance(ray, ctx.medium, cond, mSeed, ms)) {
-          // Hit the GP implicit surface; shade with the gradient as the normal.
-          const RGB_F32 albedo = lambertianAlbedo();
-          emission += throughput * (ambient * albedo +
-                                    nextEventEstimate(ms.p, ms.normal, -ray.dir,
-                                                      ctx.scene, ctx.medium, cond, mSeed, true, rng));
+          const BsdfType gbt = BsdfType(ctx.medium.surfaceBsdf);
 
-          // Scatter (Lambertian), then pin the surface for the next bounce.
-          BsdfSample bs = bsdfSample(BsdfType::Lambertian, -ray.dir, ms.normal, {0.0f, 0.0f},
+          // Direct lighting at the GP surface: diffuse only — a specular (delta)
+          // GPIS gets its lighting from the reflected ray, not NEE.
+          if (gbt == BsdfType::Lambertian) {
+            const RGB_F32 albedo = lambertianAlbedo();
+            emission += throughput * (ambient * albedo +
+                                      nextEventEstimate(ms.p, ms.normal, -ray.dir,
+                                                        ctx.scene, ctx.medium, cond, mSeed, true, rng));
+          }
+
+          // Scatter: mirror about the noisy GP normal (specular) or cosine
+          // hemisphere (Lambertian).
+          BsdfSample bs = bsdfSample(gbt, -ray.dir, ms.normal, {0.0f, 0.0f},
                                      rng.next1D(), rng.next1D());
           throughput = throughput * bs.weight;
-          wasSpecular = false;
+          wasSpecular = (gbt == BsdfType::Specular);   // mirror preserves specularness
 
           const u32 condSeed = (ctx.medium.gpMode == GPMode::SingleRealization)
                                ? seed : make_seed(seed, u32(bounce) + 1);

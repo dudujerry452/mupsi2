@@ -59,6 +59,11 @@ namespace mps::core {
     u32   impulseDensity = 3;   // points_per_cell
 
     GPMode gpMode = GPMode::SingleRealization;
+
+    // BSDF of the GP implicit surface (BsdfType: 1=Lambertian, 2=Specular).
+    // A specular GPIS reflects like a mirror about the noisy GP normal — the
+    // "perfect specular microsurface" of the paper (Fig 12/15).
+    u16 surfaceBsdf = 1;   // = BsdfType::Lambertian
   };
 
   // Far intersection of a ray with a sphere; ray.max if it misses.

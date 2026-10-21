@@ -5,6 +5,7 @@
 #include <string>
 
 #include "core/basic/core.h"
+#include "core/bsdf/bsdf.h"
 #include "core/utils/log.h"
 #include "kernels/entrance/dispatch.h"
 #include "host/scene_builder.h"
@@ -23,13 +24,17 @@ constexpr Backend ACTIVE_BACKEND = Backend::CPU;
 int main(int argc, char** argv) {
   mplog("mupsi2 renderer starting");
 
-  // CLI: mupsi [scene] [width] [height] [single|renewal]
+  // CLI: mupsi [scene] [width] [height] [single|renewal] [lambertian|specular] [spp]
   //   scene ∈ {sphere, spot, bunny, dragon}  (default: spot)
   //   [single|renewal] overrides the scene's default GPMode.
+  //   [lambertian|specular] overrides the GP surface BSDF.
+  //   [spp] overrides samples per pixel.
   const std::string scene = (argc > 1) ? argv[1] : "spot";
   const i32 w = (argc > 2) ? std::atoi(argv[2]) : 256;
   const i32 h = (argc > 3) ? std::atoi(argv[3]) : w;
   const std::string modeArg = (argc > 4) ? argv[4] : "";
+  const std::string bsdfArg = (argc > 5) ? argv[5] : "";
+  const i32 sppArg = (argc > 6) ? std::atoi(argv[6]) : 0;
 
   // 1. host staging
   mps::host::SceneConfig cfg;
@@ -49,6 +54,16 @@ int main(int argc, char** argv) {
     std::cerr << "unknown mode '" << modeArg << "' (use single|renewal)\n";
     return 1;
   }
+
+  // Override the GP surface BSDF (Lambertian / specular microsurface).
+  if (bsdfArg == "lambertian") cfg.medium.surfaceBsdf = u16(core::BsdfType::Lambertian);
+  else if (bsdfArg == "specular") cfg.medium.surfaceBsdf = u16(core::BsdfType::Specular);
+  else if (!bsdfArg.empty()) {
+    std::cerr << "unknown bsdf '" << bsdfArg << "' (use lambertian|specular)\n";
+    return 1;
+  }
+
+  if (sppArg > 0) cfg.spp = sppArg;
 
   // 2. flatten to device POD arrays (CPU: plain heap; CUDA: cudaMalloc in the shell)
   mps::core::SceneDevice device = mps::host::toDevice(cfg.host);
