@@ -99,16 +99,21 @@ namespace mps::core {
     bool wasSpecular = true;   // camera ray counts as specular: direct light hits emit
 
     for (i32 bounce = 0; bounce < ctx.settings.maxBounce; ++bounce) {
+      // Per-bounce medium seed: SingleRealization keeps one fixed realization for
+      // the whole image; Renewal/Renewal+ give each ray segment a fresh, independent
+      // realization (matches the original mupsi's make_seed(pixel, spp, seed, bounce)).
+      const u32 mSeed = (ctx.medium.gpMode == GPMode::SingleRealization)
+                        ? seed : make_seed(seed, u32(bounce));
 
       // ——— ray marching branch: inside the wrapped medium ———
       if (inMedium) {
         MediumSample ms;
-        if (sampleDistance(ray, ctx.medium, cond, seed, ms)) {
+        if (sampleDistance(ray, ctx.medium, cond, mSeed, ms)) {
           // Hit the GP implicit surface; shade with the gradient as the normal.
           const RGB_F32 albedo = lambertianAlbedo();
           emission += throughput * (ambient * albedo +
                                     nextEventEstimate(ms.p, ms.normal, -ray.dir,
-                                                      ctx.scene, ctx.medium, cond, seed, true, rng));
+                                                      ctx.scene, ctx.medium, cond, mSeed, true, rng));
 
           // Scatter (Lambertian), then pin the surface for the next bounce.
           BsdfSample bs = bsdfSample(BsdfType::Lambertian, -ray.dir, ms.normal, {0.0f, 0.0f},
@@ -116,7 +121,9 @@ namespace mps::core {
           throughput = throughput * bs.weight;
           wasSpecular = false;
 
-          cond = sampleCondition(ms, ctx.medium, seed, ray.dir);
+          const u32 condSeed = (ctx.medium.gpMode == GPMode::SingleRealization)
+                               ? seed : make_seed(seed, u32(bounce) + 1);
+          cond = sampleCondition(ms, ctx.medium, condSeed, ray.dir);
 
           ray.o = ms.p + ms.normal * ctx.settings.eps;
           ray.dir = bs.wi;
@@ -170,7 +177,7 @@ namespace mps::core {
         } else {
           emission += throughput * (ambient * albedo +
                                     nextEventEstimate(hr.p, hr.ng, -ray.dir,
-                                                      ctx.scene, ctx.medium, cond, seed, false, rng));
+                                                      ctx.scene, ctx.medium, cond, mSeed, false, rng));
         }
         throughput = throughput * bs.weight;
         wasSpecular = false;
