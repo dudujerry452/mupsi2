@@ -20,6 +20,12 @@ namespace mps::core {
     u32*      faces          = nullptr;  // all mesh triangles (3×u32 each)
     BVHNode*  bvhNodes       = nullptr;
     u32*      bvhTriIndices  = nullptr;  // global face indices
+
+    // Element counts of the shared arrays above (needed for backend upload).
+    u32 numVertices      = 0;
+    u32 numFaces         = 0;   // count of u32 entries (3 × triangles)
+    u32 numBvhNodes      = 0;
+    u32 numBvhTriIndices = 0;
   };
 
   // Host-side staging area (owns its vectors). Built by host::SceneBuilder,
@@ -35,6 +41,11 @@ namespace mps::core {
     void addSphere(const vec3f& center, f32 radius, u16 bsdfId, u16 mediumId, u16 lightId);
     // vertices/faces must be world-space.
     void addMesh(const vec3f* verts, u32 nv, const u32* tris, u32 nt, u16 bsdfId, u16 mediumId, u16 lightId);
+
+    // A mesh that is NOT rendered as a hard surface — it only provides a GP
+    // mean (MeshMean). Its geometry/BVH still land in the shared arrays.
+    std::vector<Mesh> meshMeans;
+    void addMeshMean(const vec3f* verts, u32 nv, const u32* tris, u32 nt);
   };
 
   MPHD HitRecord sceneIntersect(const Ray& ray, const SceneDevice& s);

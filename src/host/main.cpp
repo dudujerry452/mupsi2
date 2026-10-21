@@ -20,10 +20,17 @@ int main() {
   mplog("mupsi2 renderer starting");
 
   // 1. host staging
-  auto cfg = mps::host::buildDefaultScene();
+  auto cfg = mps::host::buildSpotGpScene();
 
-  // 2. flatten to device POD arrays (CPU: plain heap; CUDA: would cudaMalloc)
+  // 2. flatten to device POD arrays (CPU: plain heap; CUDA: cudaMalloc in the shell)
   mps::core::SceneDevice device = mps::host::toDevice(cfg.host);
+
+  // 2b. bind a MeshMean medium to the flattened geometry (CPU = host pointers;
+  //     the CUDA shell re-binds to device pointers after its own upload).
+  if (cfg.medium.meanType == mps::core::MeanType::Mesh && !cfg.host.meshMeans.empty()) {
+    mps::host::bindMeshMean(cfg.medium, device, cfg.host.meshMeans[0]);
+  }
+
   mps::core::RenderContext ctx{device, cfg.medium, cfg.hasMedium, cfg.settings};
 
   // 3. framebuffer

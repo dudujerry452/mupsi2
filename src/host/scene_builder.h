@@ -20,4 +20,8 @@ namespace mps::host {
   // Default GPIS sphere scene (wrapper sphere + GP medium + one solid sphere).
   SceneConfig buildDefaultScene();
 
+  // Spot (from ~/models/spot) wrapped in a GP implicit surface — the target
+  // scene for this test round. Renders at 256×256, 1 spp.
+  SceneConfig buildSpotGpScene();
+
 }

@@ -28,6 +28,11 @@ namespace mps::host {
     dev.bvhNodes      = copyArray(host.bvhNodes);
     dev.bvhTriIndices = copyArray(host.bvhTriIndices);
 
+    dev.numVertices      = u32(host.vertices.size());
+    dev.numFaces         = u32(host.faces.size());
+    dev.numBvhNodes      = u32(host.bvhNodes.size());
+    dev.numBvhTriIndices = u32(host.bvhTriIndices.size());
+
     return dev;
   }
 
@@ -39,6 +44,16 @@ namespace mps::host {
     delete[] dev.bvhNodes;
     delete[] dev.bvhTriIndices;
     dev = core::SceneDevice{};
+  }
+
+  void bindMeshMean(core::Medium& m, const core::SceneDevice& dev, const core::Mesh& ref) {
+    m.meshMean.vertices       = dev.vertices;
+    m.meshMean.faces          = dev.faces;
+    m.meshMean.bvhNodes       = dev.bvhNodes;
+    m.meshMean.bvhTriIndices  = dev.bvhTriIndices;
+    m.meshMean.bvhRoot        = ref.bvhRoot;
+    m.meshMean.bvhNodeOffset  = ref.bvhNodeOffset;
+    m.meshMean.bvhTriOffset   = ref.bvhTriOffset;
   }
 
 }

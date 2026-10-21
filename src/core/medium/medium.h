@@ -3,6 +3,7 @@
 #include "core/basic/core.h"
 #include "core/geometry/ray.h"
 #include "core/math/math_util.h"
+#include "core/gp/meanfunction.h"
 
 namespace mps::core {
 
@@ -34,6 +35,10 @@ namespace mps::core {
 
     vec3f meanCenter{0.0f, 0.0f, 0.0f};
     f32   meanRadius = 1.0f;
+
+    // Mesh mean (used when meanType == MeanType::Mesh). Host/device pointers are
+    // bound by the backend after scene upload.
+    MeshMean meshMean;
 
     // Bounding (wrapper) sphere: the medium only lives inside it, so ray
     // marching is clamped to the far intersection with this sphere.

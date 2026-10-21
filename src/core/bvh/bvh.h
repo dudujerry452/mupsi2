@@ -44,4 +44,16 @@ namespace mps::core {
   MPHD bool occludedBVH(const Ray& ray, const BVHNode* nodes, const u32* triIndices,
                         const vec3f* vertices, const u32* faces, u32 root);
 
+  // Closest point on a triangle to query point p (Ericson, RTCD §5.1.5).
+  MPHD vec3f closestPointOnTriangle(const vec3f& p, const vec3f& a, const vec3f& b, const vec3f& c);
+
+  // Nearest point on the triangle soup to p; returns distance, fills outTri/outPoint.
+  MPHD f32 closestPointBVH(const vec3f& p, const BVHNode* nodes, const u32* triIndices,
+                           const vec3f* vertices, const u32* faces, u32 root,
+                           u32& outTri, vec3f& outPoint);
+
+  // Number of ray/triangle hits (full traversal, no early exit). Used for inside tests.
+  MPHD i32 countIntersectionsBVH(const Ray& ray, const BVHNode* nodes, const u32* triIndices,
+                                 const vec3f* vertices, const u32* faces, u32 root);
+
 }

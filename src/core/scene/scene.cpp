@@ -17,50 +17,64 @@ namespace mps::core {
     spheres.push_back(s);
   }
 
+  namespace {
+
+    // Append world-space triangle soup to the shared arrays and build its BVH.
+    // Returns the Mesh metadata (offsets + root). Does not register it anywhere.
+    Mesh buildMeshData(SceneHost& h, const vec3f* verts, u32 nv, const u32* tris, u32 nt,
+                       u16 bsdfId, u16 mediumId, u16 lightId) {
+      Mesh m;
+      m.info.type = PrimitiveType::Mesh;
+      m.info.bsdfId = bsdfId;
+      m.info.texId = 0;
+      m.info.mediumId = mediumId;
+      m.info.lightId = lightId;
+      m.info.wpos = {0.0f, 0.0f, 0.0f};
+      m.info.quater = {0.0f, 0.0f, 0.0f, 1.0f};
+      m.info.scale = 1.0f;
+
+      m.vertexOffset = u32(h.vertices.size());
+      m.vertexCount = nv;
+
+      AABB box = AABB::empty();
+      for (u32 i = 0; i < nv; ++i) {
+        h.vertices.push_back(verts[i]);
+        box.extend(verts[i]);
+      }
+
+      m.faceOffset = u32(h.faces.size());
+      m.faceCount = nt;
+      for (u32 i = 0; i < 3 * nt; ++i)
+        h.faces.push_back(tris[i] + m.vertexOffset);  // global vertex indices
+      m.info.bounds = box;
+
+      BVH bvh;
+      bvh.build(h.vertices.data(), h.faces.data() + m.faceOffset, nt);
+
+      m.bvhRoot = bvh.root();
+      m.bvhNodeOffset = u32(h.bvhNodes.size());
+      m.bvhNodeCount = u32(bvh.nodes.size());
+      m.bvhTriOffset = u32(h.bvhTriIndices.size());
+      m.bvhTriCount = u32(bvh.triIndices.size());
+
+      h.bvhNodes.insert(h.bvhNodes.end(), bvh.nodes.begin(), bvh.nodes.end());
+      for (u32 ti : bvh.triIndices)
+        h.bvhTriIndices.push_back(m.faceOffset + ti);  // global face indices
+
+      return m;
+    }
+
+  } // namespace
+
   void SceneHost::addMesh(const vec3f* verts, u32 nv, const u32* tris, u32 nt,
                           u16 bsdfId, u16 mediumId, u16 lightId) {
     if (nv == 0 || nt == 0) return;
+    meshes.push_back(buildMeshData(*this, verts, nv, tris, nt, bsdfId, mediumId, lightId));
+  }
 
-    Mesh m;
-    m.info.type = PrimitiveType::Mesh;
-    m.info.bsdfId = bsdfId;
-    m.info.texId = 0;
-    m.info.mediumId = mediumId;
-    m.info.lightId = lightId;
-    m.info.wpos = {0.0f, 0.0f, 0.0f};
-    m.info.quater = {0.0f, 0.0f, 0.0f, 1.0f};
-    m.info.scale = 1.0f;
-
-    m.vertexOffset = u32(vertices.size());
-    m.vertexCount = nv;
-
-    AABB box = AABB::empty();
-    for (u32 i = 0; i < nv; ++i) {
-      vertices.push_back(verts[i]);
-      box.extend(verts[i]);
-    }
-
-    m.faceOffset = u32(faces.size());
-    m.faceCount = nt;
-    for (u32 i = 0; i < 3 * nt; ++i)
-      faces.push_back(tris[i] + m.vertexOffset);  // global vertex indices
-    m.info.bounds = box;
-
-    // Build this mesh's own BVH over the global faces/vertices arrays.
-    BVH bvh;
-    bvh.build(vertices.data(), faces.data() + m.faceOffset, nt);
-
-    m.bvhRoot = bvh.root();
-    m.bvhNodeOffset = u32(bvhNodes.size());
-    m.bvhNodeCount = u32(bvh.nodes.size());
-    m.bvhTriOffset = u32(bvhTriIndices.size());
-    m.bvhTriCount = u32(bvh.triIndices.size());
-
-    bvhNodes.insert(bvhNodes.end(), bvh.nodes.begin(), bvh.nodes.end());
-    for (u32 ti : bvh.triIndices)
-      bvhTriIndices.push_back(m.faceOffset + ti);  // global face indices
-
-    meshes.push_back(m);
+  void SceneHost::addMeshMean(const vec3f* verts, u32 nv, const u32* tris, u32 nt) {
+    if (nv == 0 || nt == 0) return;
+    meshMeans.push_back(buildMeshData(*this, verts, nv, tris, nt, 0, NO_MEDIUM, NO_LIGHT));
   }
 
   MPHD HitRecord sceneIntersect(const Ray& ray, const SceneDevice& s) {

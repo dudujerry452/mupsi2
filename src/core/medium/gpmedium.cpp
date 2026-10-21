@@ -10,7 +10,15 @@ namespace mps::core {
 
     MPHD MPINL SEKernel       kernelOf(const Medium& m) { return {m.sigma, m.lengthScale, m.kernelRadius}; }
     MPHD MPINL SparseConvNoise noiseOf(const Medium& m) { return {kernelOf(m), m.impulseDensity, m.kernelRadius}; }
-    MPHD MPINL SphereMean      meanOf(const Medium& m) { return {m.meanCenter, m.meanRadius}; }
+
+    MPHD MPINL f32 meanEval(const Medium& m, const vec3f& p) {
+      if (m.meanType == MeanType::Mesh) return m.meshMean.eval(p);
+      return SphereMean{m.meanCenter, m.meanRadius}.eval(p);
+    }
+    MPHD MPINL vec3f meanGrad(const Medium& m, const vec3f& p) {
+      if (m.meanType == MeanType::Mesh) return m.meshMean.gradient(p);
+      return SphereMean{m.meanCenter, m.meanRadius}.gradient(p);
+    }
 
     MPHD MPINL bool signPos(f32 x) { return x > 0.0f; }
 
@@ -27,11 +35,10 @@ namespace mps::core {
 
   // {f, ∇f}, un-conditioned.
   MPHD vec4f gpEvalGrad(const vec3f& p, u32 seed, const Medium& m) {
-    SphereMean mean = meanOf(m);
     SparseConvNoise noise = noiseOf(m);
 
-    f32 mu = mean.eval(p);
-    vec3f mug = mean.gradient(p);
+    f32 mu = meanEval(m, p);
+    vec3f mug = meanGrad(m, p);
     vec4f psi = noise.eval(p, seed);   // {ψ, ∇ψ}
 
     return {mu + psi.x, mug.x + psi.y, mug.y + psi.z, mug.z + psi.w};
@@ -135,7 +142,6 @@ namespace mps::core {
     c.active = false;
 
     if (m.gpMode == GPMode::RenewalPlus && !s.exited) {
-      SphereMean mean = meanOf(m);
       SparseConvNoise noise = noiseOf(m);
       SEKernel k = kernelOf(m);
 
@@ -143,9 +149,9 @@ namespace mps::core {
 
       c.active = true;
       c.C = s.p;
-      c.alpha = -mean.eval(s.p) - psi.x;                                   // pin f(C)=0
+      c.alpha = -meanEval(m, s.p) - psi.x;                                // pin f(C)=0
       c.beta  = k.oneOverSecondDerivative() *                             // match ∇f(C)=n
-                (s.normal - mean.gradient(s.p) - vec3f{psi.y, psi.z, psi.w});
+                (s.normal - meanGrad(m, s.p) - vec3f{psi.y, psi.z, psi.w});
     }
 
     return c;

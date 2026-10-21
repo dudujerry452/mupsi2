@@ -17,7 +17,8 @@ namespace mps::core {
     const RGB_F32 ambient{0.06f, 0.06f, 0.08f};
 
     Random rng(seed);
-    bool inMedium = ctx.hasMedium;
+    bool inMedium = false;   // a path starts in free space; it enters a medium only
+                             // after crossing a wrapped (Null, mediumId) boundary
 
     for (i32 bounce = 0; bounce < ctx.settings.maxBounce; ++bounce) {
 

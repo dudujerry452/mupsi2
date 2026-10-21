@@ -50,14 +50,10 @@ namespace mps::core {
       return h ^ (h >> 16);
   }
 
-  #if defined(__CUDA_ARCH__)
   MPHD float u32_to_f(u32 x) {
-    return cuda::std::bit_cast<float>(x);
+    union { u32 u; f32 f; } c;
+    c.u = x;
+    return c.f;
   }
-  #else
-  MPHD float u32_to_f(u32 x) {
-    return std::bit_cast<float>(x);
-  }
-  #endif
 
 }

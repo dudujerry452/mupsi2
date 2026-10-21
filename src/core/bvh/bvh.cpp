@@ -203,4 +203,122 @@ namespace mps::core {
     return false;
   }
 
+  MPHD vec3f closestPointOnTriangle(const vec3f& p, const vec3f& a, const vec3f& b, const vec3f& c) {
+    const vec3f ab = b - a;
+    const vec3f ac = c - a;
+    const vec3f ap = p - a;
+    const f32 d1 = mps::dot(ab, ap);
+    const f32 d2 = mps::dot(ac, ap);
+    if (d1 <= 0.0f && d2 <= 0.0f) return a;
+
+    const vec3f bp = p - b;
+    const f32 d3 = mps::dot(ab, bp);
+    const f32 d4 = mps::dot(ac, bp);
+    if (d3 >= 0.0f && d4 <= d3) return b;
+
+    const f32 vc = d1 * d4 - d3 * d2;
+    if (vc <= 0.0f && d1 >= 0.0f && d3 <= 0.0f) {
+      const f32 v = d1 / (d1 - d3);
+      return a + ab * v;
+    }
+
+    const vec3f cp = p - c;
+    const f32 d5 = mps::dot(ab, cp);
+    const f32 d6 = mps::dot(ac, cp);
+    if (d6 >= 0.0f && d5 <= d6) return c;
+
+    const f32 vb = d5 * d2 - d1 * d6;
+    if (vb <= 0.0f && d2 >= 0.0f && d6 <= 0.0f) {
+      const f32 w = d2 / (d2 - d6);
+      return a + ac * w;
+    }
+
+    const f32 va = d3 * d6 - d5 * d4;
+    if (va <= 0.0f && (d4 - d3) >= 0.0f && (d5 - d6) >= 0.0f) {
+      const f32 w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+      return b + (c - b) * w;
+    }
+
+    const f32 denom = 1.0f / (va + vb + vc);
+    const f32 v = vb * denom;
+    const f32 w = vc * denom;
+    return a + ab * v + ac * w;
+  }
+
+  MPHD f32 closestPointBVH(const vec3f& p, const BVHNode* nodes, const u32* triIndices,
+                           const vec3f* vertices, const u32* faces, u32 root,
+                           u32& outTri, vec3f& outPoint) {
+    f32 bestDist2 = INFINITY;
+    bool found = false;
+    u32 stack[64];
+    i32 sp = 0;
+    stack[sp++] = root;
+
+    while (sp > 0) {
+      const u32 idx = stack[--sp];
+      const BVHNode& node = nodes[idx];
+
+      // Squared distance from p to the node's AABB (0 if inside).
+      const vec3f q = mps::clampv(p, node.bounds.min, node.bounds.max);
+      if (mps::norm2(p - q) >= bestDist2) continue;
+
+      if (node.isLeaf()) {
+        const u32 start = node.leafStart();
+        const u32 cnt   = node.leafCount();
+        for (u32 i = start; i < start + cnt; ++i) {
+          const u32 fi = triIndices[i];
+          const vec3f& v0 = vertices[faces[3 * fi + 0]];
+          const vec3f& v1 = vertices[faces[3 * fi + 1]];
+          const vec3f& v2 = vertices[faces[3 * fi + 2]];
+          const vec3f c = closestPointOnTriangle(p, v0, v1, v2);
+          const f32 d2 = mps::norm2(p - c);
+          if (d2 < bestDist2) {
+            bestDist2 = d2;
+            outTri = fi;
+            outPoint = c;
+            found = true;
+          }
+        }
+      } else {
+        stack[sp++] = node.left;
+        stack[sp++] = node.right;
+      }
+    }
+
+    return found ? mps::sqrtf(bestDist2) : INFINITY;
+  }
+
+  MPHD i32 countIntersectionsBVH(const Ray& ray, const BVHNode* nodes, const u32* triIndices,
+                                 const vec3f* vertices, const u32* faces, u32 root) {
+    i32 count = 0;
+    u32 stack[64];
+    i32 sp = 0;
+    stack[sp++] = root;
+
+    while (sp > 0) {
+      const u32 idx = stack[--sp];
+      const BVHNode& node = nodes[idx];
+
+      if (!node.bounds.intersect(ray)) continue;
+
+      if (node.isLeaf()) {
+        const u32 start = node.leafStart();
+        const u32 cnt   = node.leafCount();
+        for (u32 i = start; i < start + cnt; ++i) {
+          const u32 fi = triIndices[i];
+          const vec3f& v0 = vertices[faces[3 * fi + 0]];
+          const vec3f& v1 = vertices[faces[3 * fi + 1]];
+          const vec3f& v2 = vertices[faces[3 * fi + 2]];
+          f32 u, v;
+          if (rayTriIntersect(ray, v0, v1, v2, u, v) >= 0.0f) ++count;
+        }
+      } else {
+        stack[sp++] = node.left;
+        stack[sp++] = node.right;
+      }
+    }
+
+    return count;
+  }
+
 }
