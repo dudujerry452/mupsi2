@@ -99,11 +99,12 @@ namespace mps::core {
     bool wasSpecular = true;   // camera ray counts as specular: direct light hits emit
 
     for (i32 bounce = 0; bounce < ctx.settings.maxBounce; ++bounce) {
-      // Per-bounce medium seed: SingleRealization keeps one fixed realization for
-      // the whole image; Renewal/Renewal+ give each ray segment a fresh, independent
-      // realization (matches the original mupsi's make_seed(pixel, spp, seed, bounce)).
+      // Per-bounce medium seed: SingleRealization keeps ONE fixed realization for
+      // the whole image (a constant global seed, independent of pixel/spp);
+      // Renewal/Renewal+ give each ray segment a fresh, independent realization
+      // (matches the original mupsi's make_seed(pixel, spp, seed, bounce)).
       const u32 mSeed = (ctx.medium.gpMode == GPMode::SingleRealization)
-                        ? seed : make_seed(seed, u32(bounce));
+                        ? 42u : make_seed(seed, u32(bounce));
 
       // ——— ray marching branch: inside the wrapped medium ———
       if (inMedium) {
@@ -128,7 +129,7 @@ namespace mps::core {
           wasSpecular = (gbt == BsdfType::Specular);   // mirror preserves specularness
 
           const u32 condSeed = (ctx.medium.gpMode == GPMode::SingleRealization)
-                               ? seed : make_seed(seed, u32(bounce) + 1);
+                               ? 42u : make_seed(seed, u32(bounce) + 1);
           cond = sampleCondition(ms, ctx.medium, condSeed, ray.dir);
 
           ray.o = ms.p + ms.normal * ctx.settings.eps;
