@@ -138,7 +138,9 @@ namespace mps::core {
       const f32 cosTh  = mps::dot(n, ls.d);
       const f32 nd     = mps::dot(n, d);
       const f32 f      = phaseEval(pGxy, lambda, cosTh, nd);
-      if (f <= 0.0f || cosTh <= 0.0f) return {0.0f, 0.0f, 0.0f};
+      // Guard degenerate/huge Jacobians (grazing half-vector → λ² overflow → f = inf
+      // → inf·0 = NaN). NaN would poison the whole pixel's emission.
+      if (!(f > 0.0f) || f > 1e12f || cosTh <= 0.0f) return {0.0f, 0.0f, 0.0f};
 
       // Shadow ray.
       Ray sr;
@@ -223,7 +225,10 @@ namespace mps::core {
                 const vec3f nU = (lambdaU > 1e-6f) ? G * (1.0f / lambdaU) : ms.normal;
                 const f32 fU = phaseEval(pGxy, lambdaU, mps::dot(nU, bs.wi), mps::dot(nU, ray.dir));
                 const f32 pOmegaU = lightDirectionPdf(ms.p, bs.wi, ctx.scene);
-                const f32 wUni = (fU * fU) / (fU * fU + pOmegaU * pOmegaU);
+                const f32 denom = fU * fU + pOmegaU * pOmegaU;
+                // Degenerate (both pdfs ~0): keep the UNI recursive contribution
+                // (it carries the envmap / infinite lights, not the area-light NEE).
+                const f32 wUni = (denom > 0.0f) ? (fU * fU) / denom : 1.0f;
                 throughput = throughput * wUni;
               }
             }
