@@ -13,7 +13,13 @@ namespace mps::host {
   MPH void save_ppm(const std::string& filename, const FrameBuffer<RGB_8Bit>& fb) {
     std::ofstream ofs(filename, std::ios::binary);
     ofs << "P6\n" << fb.width << " " << fb.height << "\n255\n";
-    ofs.write(reinterpret_cast<const char*>(fb.pixels), fb.bytesize());
+    // Framebuffer convention: (0,0) is BOTTOM-left (row 0 = bottom row), and the
+    // PPM is written top-down. Emit rows in reverse so the bottom-left of the
+    // framebuffer lands at the bottom-left of the image.
+    for (i32 y = fb.height - 1; y >= 0; --y) {
+      ofs.write(reinterpret_cast<const char*>(fb.pixels + size_t(y) * fb.width),
+                fb.width * sizeof(RGB_8Bit));
+    }
     ofs.close();
   }
 
