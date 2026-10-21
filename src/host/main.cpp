@@ -36,6 +36,7 @@ int main(int argc, char** argv) {
   const std::string bsdfArg = (argc > 5) ? argv[5] : "";
   const i32 sppArg = (argc > 6) ? std::atoi(argv[6]) : 0;
   const f32 sigmaArg = (argc > 7) ? std::atof(argv[7]) : 0.0f;
+  const std::string colorArg = (argc > 8) ? argv[8] : "";
 
   // 1. host staging
   mps::host::SceneConfig cfg;
@@ -71,6 +72,15 @@ int main(int argc, char** argv) {
   if (sppArg > 0) cfg.spp = sppArg;
   if (sigmaArg > 0.0f) cfg.medium.sigma = sigmaArg;
 
+  // GPIS texturing approach.
+  if (colorArg == "voxel")       cfg.medium.colorMethod = u16(core::ColorMethod::Voxel);
+  else if (colorArg == "surface") cfg.medium.colorMethod = u16(core::ColorMethod::Surface);
+  else if (colorArg == "kernel")  cfg.medium.colorMethod = u16(core::ColorMethod::Kernel);
+  else if (!colorArg.empty()) {
+    std::cerr << "unknown color '" << colorArg << "' (use voxel|surface|kernel)\n";
+    return 1;
+  }
+
   // 2. flatten to device POD arrays (CPU: plain heap; CUDA: cudaMalloc in the shell)
   mps::core::SceneDevice device = mps::host::toDevice(cfg.host);
 
@@ -83,6 +93,9 @@ int main(int argc, char** argv) {
   }
   if (cfg.medium.kernelField.res > 0) {
     mps::host::bindKernelField(cfg.medium, device);
+  }
+  if (cfg.medium.colorGrid.res > 0) {
+    mps::host::bindColorGrid(cfg.medium, device);
   }
 
   mps::core::RenderContext ctx{device, cfg.medium, cfg.hasMedium, cfg.settings};

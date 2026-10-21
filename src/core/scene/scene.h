@@ -39,6 +39,10 @@ namespace mps::core {
     f32* kernelLength = nullptr;
     u32  kernelRes    = 0;
 
+    // Dense RGB color voxel grid (GPIS texturing approach 1).
+    RGB_F32* colorGrid = nullptr;
+    u32      colorRes  = 0;
+
     // Element counts of the shared arrays above (needed for backend upload).
     u32 numVertices      = 0;
     u32 numFaces         = 0;   // count of u32 entries (3 × triangles)
@@ -70,6 +74,10 @@ namespace mps::core {
     std::vector<f32> kernelSigma;
     std::vector<f32> kernelLength;
     u32 kernelRes = 0;
+
+    // Dense RGB color voxel grid.
+    std::vector<RGB_F32> colorGrid;
+    u32 colorRes = 0;
 
     void addSphere(const vec3f& center, f32 radius, u16 bsdfId, u16 mediumId, u16 lightId);
     void addLight(const vec3f& center, f32 radius, const RGB_F32& emission);

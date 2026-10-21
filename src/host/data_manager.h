@@ -23,4 +23,7 @@ namespace mps::host {
   // Point a Medium's non-stationary kernel field at the device grids.
   void bindKernelField(core::Medium& m, const core::SceneDevice& dev);
 
+  // Point a Medium's dense RGB color grid at the device array.
+  void bindColorGrid(core::Medium& m, const core::SceneDevice& dev);
+
 }

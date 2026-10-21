@@ -60,6 +60,7 @@ namespace mps::kernels {
     core::AreaLight* d_lights      = upload(h.lights, h.numLights);
     f32* d_kernelSigma  = upload(h.kernelSigma, h.kernelRes * h.kernelRes * h.kernelRes);
     f32* d_kernelLength = upload(h.kernelLength, h.kernelRes * h.kernelRes * h.kernelRes);
+    RGB_F32* d_colorGrid = upload(h.colorGrid, h.colorRes * h.colorRes * h.colorRes);
 
     core::SceneDevice d_scene;
     d_scene.numSpheres = h.numSpheres;
@@ -81,6 +82,8 @@ namespace mps::kernels {
     d_scene.kernelSigma  = d_kernelSigma;
     d_scene.kernelLength = d_kernelLength;
     d_scene.kernelRes    = h.kernelRes;
+    d_scene.colorGrid = d_colorGrid;
+    d_scene.colorRes  = h.colorRes;
     d_scene.numVertices      = h.numVertices;
     d_scene.numFaces         = h.numFaces;
     d_scene.numBvhNodes      = h.numBvhNodes;
@@ -104,6 +107,8 @@ namespace mps::kernels {
     d_medium.kernelField.sigma  = d_scene.kernelSigma;
     d_medium.kernelField.length = d_scene.kernelLength;
     d_medium.kernelField.res    = d_scene.kernelRes;
+    d_medium.colorGrid.data = d_scene.colorGrid;
+    d_medium.colorGrid.res  = d_scene.colorRes;
 
     // ——— 2b. environment map upload ———
     core::EnvMap d_envMap;
@@ -142,6 +147,7 @@ namespace mps::kernels {
     cudaFree(d_lights);
     cudaFree(d_kernelSigma);
     cudaFree(d_kernelLength);
+    cudaFree(d_colorGrid);
     cudaFree(d_envPixels);
 
     mplogtag("cuda", "render {}x{} spp={} done", w, hh, spp);

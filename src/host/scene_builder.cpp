@@ -44,6 +44,28 @@ namespace mps::host {
             baseLength * 0.5f, baseLength * 2.0f);
     }
 
+    // Bake the analytic 3D color field into a dense RGB voxel grid (approach 1).
+    void buildColorGrid(SceneConfig& cfg, const core::AABB& bounds, u32 res) {
+      const vec3f diag = bounds.diagonal();
+      const f32 maxExtent = mps::maxf(diag.x, mps::maxf(diag.y, diag.z));
+      const f32 cellSize = (res > 0) ? maxExtent / f32(res) : 1.0f;
+
+      cfg.host.colorRes = res;
+      cfg.host.colorGrid.assign(size_t(res) * res * res, RGB_F32{0, 0, 0});
+      for (u32 k = 0; k < res; ++k)
+        for (u32 j = 0; j < res; ++j)
+          for (u32 i = 0; i < res; ++i) {
+            const vec3f p = bounds.min + vec3f{f32(i), f32(j), f32(k)} * cellSize;
+            cfg.host.colorGrid[size_t(i) + res * (size_t(j) + res * size_t(k))] =
+                core::fieldColor(p, bounds.min, bounds.max);
+          }
+
+      cfg.medium.colorGrid.origin   = bounds.min;
+      cfg.medium.colorGrid.cellSize = cellSize;
+      cfg.medium.colorGrid.res      = res;
+      mplog("buildColorGrid: res={} baked", res);
+    }
+
   } // namespace
 
   SceneConfig buildDefaultScene(i32 w, i32 h) {
@@ -176,6 +198,13 @@ namespace mps::host {
       core::AABB worldBox2 = core::AABB::empty();
       for (const vec3f& v : worldVerts) worldBox2.extend(v);
       buildTestKernelField(cfg, worldBox2, 64, sigma, kernelRadius);
+    }
+
+    // Bake the dense RGB color grid (GPIS texturing approach 1), cheap at res 64.
+    {
+      core::AABB worldBox3 = core::AABB::empty();
+      for (const vec3f& v : worldVerts) worldBox3.extend(v);
+      buildColorGrid(cfg, worldBox3, 64);
     }
 
     // ——— wrapper sphere (transparent, holds the medium) ———

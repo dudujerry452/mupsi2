@@ -42,6 +42,9 @@ namespace mps::host {
     dev.kernelLength = copyArray(host.kernelLength);
     dev.kernelRes    = host.kernelRes;
 
+    dev.colorGrid = copyArray(host.colorGrid);
+    dev.colorRes  = host.colorRes;
+
     dev.numVertices      = u32(host.vertices.size());
     dev.numFaces         = u32(host.faces.size());
     dev.numBvhNodes      = u32(host.bvhNodes.size());
@@ -64,6 +67,7 @@ namespace mps::host {
     delete[] dev.lights;
     delete[] dev.kernelSigma;
     delete[] dev.kernelLength;
+    delete[] dev.colorGrid;
     dev = core::SceneDevice{};
   }
 
@@ -90,6 +94,12 @@ namespace mps::host {
     m.kernelField.sigma  = dev.kernelSigma;
     m.kernelField.length = dev.kernelLength;
     m.kernelField.res    = dev.kernelRes;
+    // origin / cellSize are set by the scene builder.
+  }
+
+  void bindColorGrid(core::Medium& m, const core::SceneDevice& dev) {
+    m.colorGrid.data = dev.colorGrid;
+    m.colorGrid.res  = dev.colorRes;
     // origin / cellSize are set by the scene builder.
   }
 

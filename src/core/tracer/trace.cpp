@@ -1,6 +1,7 @@
 #include "core/tracer/trace.h"
 
 #include "core/bsdf/bsdf.h"
+#include "core/gp/colorfield.h"
 #include "core/gp/gradient_nee.h"
 #include "core/light/light.h"
 #include "core/math/random.h"
@@ -8,6 +9,19 @@
 namespace mps::core {
 
   namespace {
+
+    // GPIS surface color by the selected texturing approach.
+    MPHD MPINL RGB_F32 colorSample(const vec3f& p, const Medium& m) {
+      const ColorMethod cm = ColorMethod(m.colorMethod);
+      if (cm == ColorMethod::Voxel && !m.colorGrid.empty()) return m.colorGrid.eval(p);
+      const vec3f mn = m.colorGrid.origin;
+      const vec3f mx = m.colorGrid.origin +
+                       vec3f{f32(m.colorGrid.res), f32(m.colorGrid.res), f32(m.colorGrid.res)} *
+                       m.colorGrid.cellSize;
+      if (cm == ColorMethod::Surface) return fieldColor(p, mn, mx);
+      if (cm == ColorMethod::Kernel) return kernelColor(p, mn, mx);
+      return lambertianAlbedo();
+    }
 
     // Closest hit skipping transparent (Null) primitives — walks through the
     // wrapped-medium boundary so a shadow/BSDF ray can reach a light behind it.
@@ -27,11 +41,11 @@ namespace mps::core {
     // Tungsten TraceBase::sampleDirect): the light-sampled and BSDF-sampled
     // strategies are combined with the power heuristic.
     MPHD RGB_F32 nextEventEstimate(const vec3f& p, const vec3f& n, const vec3f& wo,
+                                   const RGB_F32& albedo,
                                    const SceneDevice& scene, const Medium& m,
                                    const GPConditioningState& c, u32 seed,
                                    bool inMedium, Random& rng) {
       if (scene.numLights == 0) return {0.0f, 0.0f, 0.0f};
-      const RGB_F32 albedo = lambertianAlbedo();
       RGB_F32 L{0.0f, 0.0f, 0.0f};
 
       // —— strategy 1: light sampling ——
@@ -190,9 +204,9 @@ namespace mps::core {
 
           if (gbt == BsdfType::Lambertian) {
             // Diffuse GPIS: NEE + ambient.
-            const RGB_F32 albedo = lambertianAlbedo();
+            const RGB_F32 albedo = colorSample(ms.p, ctx.medium);
             emission += throughput * (ambient * albedo +
-                                      nextEventEstimate(ms.p, ms.normal, -ray.dir,
+                                      nextEventEstimate(ms.p, ms.normal, -ray.dir, albedo,
                                                         ctx.scene, ctx.medium, cond, mSeed, true, rng));
           } else if (gbt == BsdfType::Specular) {
             // §6 NDF next-event estimation for the delta microsurface. Compile-time
@@ -286,14 +300,14 @@ namespace mps::core {
         throughput = throughput * bs.weight;   // {1,1,1}
       } else {
         // Opaque Lambertian surface.
-        const RGB_F32 albedo = lambertianAlbedo();
+        const RGB_F32 albedo = colorSample(hr.p, ctx.medium);
         if (hr.lightId != NO_LIGHT && wasSpecular) {
           // Directly viewing a light through a specular path: emit it (NEE at the
           // previous vertex already counted it for diffuse bounces).
           emission += throughput * ctx.scene.lights[hr.lightId].emission;
         } else {
           emission += throughput * (ambient * albedo +
-                                    nextEventEstimate(hr.p, hr.ng, -ray.dir,
+                                    nextEventEstimate(hr.p, hr.ng, -ray.dir, albedo,
                                                       ctx.scene, ctx.medium, cond, mSeed, false, rng));
         }
         throughput = throughput * bs.weight;

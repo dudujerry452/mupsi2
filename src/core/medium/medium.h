@@ -5,6 +5,7 @@
 #include "core/math/math_util.h"
 #include "core/gp/meanfunction.h"
 #include "core/gp/kernelfield.h"
+#include "core/gp/colorfield.h"
 
 namespace mps::core {
 
@@ -52,6 +53,11 @@ namespace mps::core {
     // Non-stationary kernel field (paper Eq. 25, isotropic scaling): spatially
     // varying σ and L, trilinearly interpolated at query points.
     KernelField kernelField;
+
+    // GPIS texturing: color sampling method (ColorMethod) + the dense RGB voxel
+    // grid used by ColorMethod::Voxel.
+    u16 colorMethod = u16(ColorMethod::Constant);
+    ColorGrid colorGrid;
 
     // Bounding (wrapper) sphere: the medium only lives inside it, so ray
     // marching is clamped to the far intersection with this sphere.
