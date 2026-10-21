@@ -1,80 +1,45 @@
-#pragma once 
+#pragma once
 
 #include "core/basic/core.h"
-#include "core/utils/panic.h"
-
-#define ENUM_PRIMITIVE_FUNC(X) \
-  X(Sphere) \
-  X(Mesh)
+#include "core/geometry/aabb.h"
 
 namespace mps::core {
 
-  // ----------- main template definations  ----------------
+  enum class PrimitiveType : u16 { Sphere = 0, Mesh = 1 };
 
-  #define DEF_ENUM(name) name, 
+  constexpr u16 NO_MEDIUM = 0xFFFFu;
+  constexpr u16 NO_LIGHT  = 0xFFFFu;
 
-  enum class PrimitiveType: u16 {
-    ENUM_PRIMITIVE_FUNC(DEF_ENUM)
-  }; 
-
-  #undef DEF_ENUM
-
-  template<PrimitiveType T> 
-  struct Primitive;
-
+  // Common header shared by every primitive. Sphere uses info.scale as its
+  // radius and info.wpos as its center; Mesh stores pre-transformed world-space
+  // geometry in SceneDevice and uses info only for metadata + bounds.
   struct alignas(16) PrimitiveInfo {
-    PrimitiveType type; 
-    u16 bsdfId;
-    u16 texId;
+    PrimitiveType type;
+    u16 bsdfId;    // BsdfType
+    u16 texId;     // Texture id
+    u16 mediumId;  // NO_MEDIUM = none, else the wrapped medium
+    u16 lightId;   // NO_LIGHT = not a light
     vec3f wpos;
-    vec4f quater; 
-    f32 scale; 
-  }; 
-
-  // ---------- primitive definations ------------
-
-  template<>
-  struct Primitive<PrimitiveType::Sphere> {
-    PrimitiveInfo info; 
-
-    f32 radius;
-  }; 
-
-
-  template<> 
-  struct Primitive<PrimitiveType::Mesh> {
-    PrimitiveInfo info; 
-
-    u32 vertex_cnt; 
-    u32 fac_cnt; 
-
-    vec3f *vertices; 
-    struct Triangle {
-      u32 i[3]; 
-    }*faces;
-
-  }; 
-
-
-  // ---------- traits ---------
-
-  template<PrimitiveType T>
-  struct PrimitiveTrait {
-    using Type = Primitive<T>; 
-    static constexpr u32 raw_size = sizeof(Type);
-    static constexpr u32 aligned_size = (raw_size+15)&(~15);  
+    vec4f quater;
+    f32  scale;
+    AABB bounds;
   };
 
-  MPHD MPINL u32 alignedSizeOfPrimitive(PrimitiveType type) {
-    #define DEF_TRAIT(name) \
-    case PrimitiveType::name: {return PrimitiveTrait<PrimitiveType::name>::aligned_size; }
+  struct Sphere {
+    PrimitiveInfo info;   // radius = info.scale, center = info.wpos
+  };
 
-    switch(type) {
-      ENUM_PRIMITIVE_FUNC(DEF_TRAIT)
-      default: { mppanic("Primitive not implemented");  } // panic
-    }
-
-    #undef DEF_TRAIT
-  }
+  struct Mesh {
+    PrimitiveInfo info;
+    u32 vertexOffset;   // into SceneDevice::vertices
+    u32 vertexCount;
+    u32 faceOffset;     // into SceneDevice::faces (3×u32 per triangle)
+    u32 faceCount;
+    u32 bvhRoot;        // root node index into SceneDevice::bvhNodes
+    u32 bvhNodeOffset;
+    u32 bvhNodeCount;
+    u32 bvhTriOffset;   // into SceneDevice::bvhTriIndices
+    u32 bvhTriCount;
+  };
 
 }

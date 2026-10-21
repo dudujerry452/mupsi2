@@ -1,44 +1,44 @@
 #pragma once
 
+#include "core/geometry/ray.h"
 #include "core/primitive/primitive.h"
-#include "core/math/math_util.h"
+#include "core/bvh/bvh.h"
 
 namespace mps::core {
 
-  struct Ray {
-    vec3f o; 
-    vec3f dir;  // must be normalized
-    f32 min, max; 
-
-    MPHD MPINL vec3f at(f32 t) const { return o+t*dir; }
-  }; 
-
   struct HitRecord {
-    bool hit; 
+    bool hit = false;
 
-    f32 t;  // fly distance
-    vec3f p; // world hit point 
-    vec3f wo; // where it from (in calculation)
+    f32   t = 0.0f;    // fly distance along ray
+    vec3f p;           // world hit point
+    vec3f wo;          // where the ray came from (=-ray.dir)
 
-    // TBN 
-    vec3f ng; // geometry normal 
-    vec3f tan;  // tangent 
-    vec3f bitan; 
+    vec3f ng;          // geometric normal (points against the ray)
+    vec3f tan, bitan;  // tangent frame
 
-    vec2f uv; 
-    u16 texId; 
-    u16 bsdfId; 
-    u16 lightId;  
-  }; 
+    vec2f uv;          // surface uv
+    u16 texId   = 0;
+    u16 bsdfId  = 0;
+    u16 mediumId = NO_MEDIUM;  // medium wrapped inside the hit primitive
+    u16 lightId = NO_LIGHT;
+  };
 
-  template<PrimitiveType T> 
-  struct Intersect; 
+  // Shared device arrays for all meshes.
+  struct MeshGeometry {
+    const vec3f*   vertices;
+    const u32*     faces;         // 3×u32 per triangle
+    const BVHNode* bvhNodes;
+    const u32*     bvhTriIndices; // global face indices
+  };
+
+  template<PrimitiveType T> struct Intersect;
 
   template<> struct Intersect<PrimitiveType::Sphere> {
-    MPHD static HitRecord run(const Ray& ray, const Primitive<PrimitiveType::Sphere>& primitive); 
-  }; 
+    MPHD static HitRecord run(const Ray& ray, const Sphere& s);
+  };
 
-
-
+  template<> struct Intersect<PrimitiveType::Mesh> {
+    MPHD static HitRecord run(const Ray& ray, const Mesh& m, const MeshGeometry& g);
+  };
 
 }

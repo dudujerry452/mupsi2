@@ -8,7 +8,8 @@ namespace mps::core {
   constexpr u32 PRIME32_5 = 374761393U;
 
   MPHD void combine(u32& seed, u32 val) {
-    seed ^= val  + 0x9e3779b0 + (seed << 6) + (seed >> 2);
+    // 0x9e3779b9 — the boost::hash_combine constant, same as original mupsi.
+    seed ^= val + 0x9e3779b9u + (seed << 6) + (seed >> 2);
   }
 
   MPHD u32 xxhash(u32 x) {

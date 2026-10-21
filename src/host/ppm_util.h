@@ -1,30 +1,24 @@
-#pragma once 
+#pragma once
 
 #include <string>
 #include "core/basic/types.h"
+#include "core/math/math_util.h"
 
 namespace mps::host {
 
+  // Radiance → 8-bit sRGB (Reinhard tone map + gamma 2.2).
+  MPHD MPINL RGB_8Bit radiance_to_8bit(RGB_F32 rgb) {
+    auto encode = [](f32 x) -> byte {
+      x = x > 0.0f ? x : 0.0f;                 // clamp
+      x = x / (1.0f + x);                      // Reinhard
+      x = mps::powf(x, 1.0f / 2.2f);           // gamma
+      return static_cast<byte>(x * 255.0f + 0.5f);
+    };
+    return {encode(rgb.r), encode(rgb.g), encode(rgb.b)};
+  }
 
-  /*
-  // standard usage:  
-    mps::FrameBuffer fb; 
-    fb.height = 256; 
-    fb.width = 512; 
-    fb.pixels = new mps::RGB[fb.pixelnum()];
+  MPHD void framebuffer_radiance_to_8bit(const FrameBuffer<RGB_F32>& fb, FrameBuffer<RGB_8Bit>& ret);
 
-    for(mps::i32 i = 0; i < fb.width; i ++) {
-        for(mps::i32 j = 0; j < fb.height; j ++) {
-            fb.pixel(i, j) = {static_cast<mps::byte>(i), static_cast<mps::byte>(j), 100}; 
-        }
-    }
-    mps::host::save_ppm("test.ppm", fb);
-    delete[] fb.pixels;
-  */
-  MPH MPINL RGB_8Bit radiance_to_8bit(RGB_8Bit rgb); 
-
-  MPH void framebuffer_radiance_to_8bit(const FrameBuffer<RGB_8Bit>& fb, FrameBuffer<RGB_F32>& ret); 
-
-  MPH void save_ppm(const std::string& filename, const FrameBuffer<RGB_8Bit>& fb); 
+  MPH void save_ppm(const std::string& filename, const FrameBuffer<RGB_8Bit>& fb);
 
 }

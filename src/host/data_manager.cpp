@@ -1,49 +1,44 @@
 #include "host/data_manager.h"
 
-#include "core/primitive/primitive.h"
-#include <vector> 
-#include <stdexcept> 
-#include <cstring> 
-#include <memory>
-
+#include <cstring>
 
 namespace mps::host {
 
-  MPH std::tuple<u32, u32*, u32*, void*> flatten_primitive(const std::vector<void*>& prims) {
-    if(prims.empty()) return {0, nullptr, nullptr, nullptr}; 
-    
-    u32 num = prims.size(); 
-    u32* starts = new u32[num];  starts[0] = 0; 
-    std::vector<u32> lens(num, 0); 
+  namespace {
 
-    i32 i = 0, cnt = 0; 
-    for(auto p: prims) {
-      auto* ptr = reinterpret_cast<core::PrimitiveInfo*>(p);
-      u32 siz = core::alignedSizeOfPrimitive(ptr->type); 
-      starts[i] = cnt; 
-      cnt += siz; 
-      lens[i] = siz; 
+    template<typename T>
+    T* copyArray(const std::vector<T>& v) {
+      if (v.empty()) return nullptr;
+      T* p = new T[v.size()];
+      std::memcpy(p, v.data(), v.size() * sizeof(T));
+      return p;
     }
 
-    char* flat = new char[cnt]; 
-    for(u32 i = 0; i < num; i ++) {
-      memcpy(flat+starts[i], prims[i], lens[i]); 
-    }
-    return {num, starts, lens.data(), static_cast<void*>(flat)};  
+  } // namespace
+
+  core::SceneDevice toDevice(const core::SceneHost& host) {
+    core::SceneDevice dev;
+    dev.numSpheres = u32(host.spheres.size());
+    dev.numMeshes  = u32(host.meshes.size());
+
+    dev.spheres = copyArray(host.spheres);
+    dev.meshes  = copyArray(host.meshes);
+    dev.vertices      = copyArray(host.vertices);
+    dev.faces         = copyArray(host.faces);
+    dev.bvhNodes      = copyArray(host.bvhNodes);
+    dev.bvhTriIndices = copyArray(host.bvhTriIndices);
+
+    return dev;
   }
 
-  MPH core::SceneDevice SceneHost2Device(const core::SceneHost& scene) {
-    core::SceneDevice dev; 
-
-
-    // primitive section
-    auto [aa, bb, cc, dd] = flatten_primitive(scene.primitives); 
-    dev.num = aa; 
-    dev.starts = bb; 
-    dev.lens = cc; 
-    dev.primitives = dd; 
-
-    return dev; 
+  void freeDevice(core::SceneDevice& dev) {
+    delete[] dev.spheres;
+    delete[] dev.meshes;
+    delete[] dev.vertices;
+    delete[] dev.faces;
+    delete[] dev.bvhNodes;
+    delete[] dev.bvhTriIndices;
+    dev = core::SceneDevice{};
   }
 
 }
