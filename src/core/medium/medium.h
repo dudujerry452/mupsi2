@@ -21,6 +21,10 @@ namespace mps::core {
     f32   t = 0.0f;
     vec3f p{0.0f, 0.0f, 0.0f};
     vec3f normal{0.0f, 0.0f, 0.0f};
+    // Unconditioned gradient decomposition at the hit (for §6 NDF NEE):
+    // gradMean = ∇μ, gradNoise = ∇ψ (sampled); g_z = dot(gradNoise, ray.dir).
+    vec3f gradMean{0.0f, 0.0f, 0.0f};
+    vec3f gradNoise{0.0f, 0.0f, 0.0f};
   };
 
   enum class MediumType : u16 { SDF = 0, GP = 1 };

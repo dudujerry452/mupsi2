@@ -45,11 +45,14 @@ namespace mps::core {
     return true;
   }
 
-  // Pdf of sampling `dir` from p toward the light (MIS counterpart).
-  MPHD MPINL f32 lightDirectPdf(const vec3f& p, const AreaLight& L) {
-    const f32 d = mps::norm(L.center - p);
-    const f32 cosTheta = mps::sqrtf(mps::maxf(d * d - L.radius * L.radius, 0.0f)) / d;
-    return uniformCapPdf(cosTheta);
+  // Pdf of sampling direction `ws` from p toward the light (MIS counterpart).
+  // Zero when `ws` falls outside the light's spherical cap (it cannot be sampled).
+  MPHD MPINL f32 lightDirectPdf(const vec3f& p, const AreaLight& L, const vec3f& ws) {
+    const vec3f toC = L.center - p;
+    const f32 d = mps::norm(toC);
+    const f32 cosThetaMax = mps::sqrtf(mps::maxf(d * d - L.radius * L.radius, 0.0f)) / d;
+    if (mps::dot(ws, toC / d) < cosThetaMax) return 0.0f;   // outside the cap
+    return uniformCapPdf(cosThetaMax);
   }
 
   // Approximate radiance for light importance sampling (Tungsten approximateRadiance).

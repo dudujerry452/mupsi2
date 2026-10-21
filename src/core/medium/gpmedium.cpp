@@ -183,6 +183,12 @@ namespace mps::core {
         // Guard against a near-zero total gradient (rare, but a single frozen
         // realization would otherwise produce NaN normals -> fireflies).
         out.normal = (glen > 1e-6f) ? grad * (1.0f / glen) : meanGrad(m, out.p);
+
+        // Unconditioned gradient decomposition for the §6 NDF NEE.
+        vec4f mg  = meanEvalGrad(m, out.p);
+        vec4f psi = gpNoiseGrad(out.p, ray.dir, t, seed, m);
+        out.gradMean  = {mg.y, mg.z, mg.w};
+        out.gradNoise = {psi.y, psi.z, psi.w};
         return true;
       }
 
