@@ -57,7 +57,7 @@ namespace mps::host {
           for (u32 i = 0; i < res; ++i) {
             const vec3f p = bounds.min + vec3f{f32(i), f32(j), f32(k)} * cellSize;
             cfg.host.colorGrid[size_t(i) + res * (size_t(j) + res * size_t(k))] =
-                core::fieldColor(p, bounds.min, bounds.max);
+                core::kernelColor(p, bounds.min, bounds.max);
           }
 
       cfg.medium.colorGrid.origin   = bounds.min;
