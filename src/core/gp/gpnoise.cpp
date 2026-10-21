@@ -10,7 +10,7 @@ namespace mps::core {
     i32 cy = i32(mps::floorf(p.y / cellSize));
     i32 cz = i32(mps::floorf(p.z / cellSize));
 
-    const f32 L2 = mps::dot(kernel.lengthScale, kernel.lengthScale);
+    const f32 L2 = sigmaL2At(p).y;
     const f32 support2 = cellSize * cellSize;   // compact support radius = cellSize (= kernelRadius)
 
     vec4f acc{0.0f, 0.0f, 0.0f, 0.0f};
@@ -52,13 +52,13 @@ namespace mps::core {
     return acc;
   }
 
-  MPHD vec2f SparseConvNoise::eval1D(f32 t, u32 seed) const {
+  MPHD vec2f SparseConvNoise::eval1D(const vec3f& p, f32 t, u32 seed) const {
     // Grid cell containing t along the ray.
     const f32 tGrid = t / cellSize;
     const f32 frac  = tGrid - mps::floorf(tGrid);
     const i32 ci    = i32(mps::floorf(tGrid));
 
-    const f32 L2       = mps::dot(kernel.lengthScale, kernel.lengthScale);
+    const f32 L2       = sigmaL2At(p).y;
     const f32 support2 = cellSize * cellSize;   // compact support radius = cellSize
 
     f32 val = 0.0f, gradT = 0.0f;
@@ -81,7 +81,7 @@ namespace mps::core {
       }
     }
 
-    const f32 scale = kernel.sigma / mps::sqrtf(variance1D());
+    const f32 scale = sigmaL2At(p).x / mps::sqrtf(variance1D(p));
     return {val * scale, gradT * scale};
   }
 

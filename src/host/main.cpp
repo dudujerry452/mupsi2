@@ -39,12 +39,16 @@ int main(int argc, char** argv) {
 
   // 1. host staging
   mps::host::SceneConfig cfg;
-  if      (scene == "sphere") cfg = mps::host::buildDefaultScene(w, h);
-  else if (scene == "spot")   cfg = mps::host::buildSpotGpScene(w, h);
-  else if (scene == "bunny")  cfg = mps::host::buildBunnyGpScene(w, h);
-  else if (scene == "dragon") cfg = mps::host::buildDragonGpScene(w, h);
+  if      (scene == "sphere")   cfg = mps::host::buildDefaultScene(w, h);
+  else if (scene == "spot")     cfg = mps::host::buildSpotGpScene(w, h);
+  else if (scene == "bunny")    cfg = mps::host::buildBunnyGpScene(w, h);
+  else if (scene == "dragon")   cfg = mps::host::buildDragonGpScene(w, h);
+  else if (scene == "dragonns") // dragon + non-stationary kernel field (Eq. 25 test)
+    cfg = mps::host::buildMeshGpScene("/home/dudujerry/models/dragon.obj", w, h,
+                                      500.0f, 150.0f, core::GPMode::SingleRealization,
+                                      1.0f, 1.0f, true, 256, true);
   else {
-    std::cerr << "unknown scene '" << scene << "' (use sphere|spot|bunny|dragon)\n";
+    std::cerr << "unknown scene '" << scene << "' (use sphere|spot|bunny|dragon|dragonns)\n";
     return 1;
   }
 
@@ -76,6 +80,9 @@ int main(int argc, char** argv) {
     mps::host::bindMeshMean(cfg.medium, device, cfg.host.meshMeans[0]);
   } else if (cfg.medium.meanType == mps::core::MeanType::Voxel) {
     mps::host::bindVoxelMean(cfg.medium, device);
+  }
+  if (cfg.medium.kernelField.res > 0) {
+    mps::host::bindKernelField(cfg.medium, device);
   }
 
   mps::core::RenderContext ctx{device, cfg.medium, cfg.hasMedium, cfg.settings};

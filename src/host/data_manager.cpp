@@ -38,6 +38,10 @@ namespace mps::host {
     dev.lights    = copyArray(host.lights);
     dev.numLights = u32(host.lights.size());
 
+    dev.kernelSigma  = copyArray(host.kernelSigma);
+    dev.kernelLength = copyArray(host.kernelLength);
+    dev.kernelRes    = host.kernelRes;
+
     dev.numVertices      = u32(host.vertices.size());
     dev.numFaces         = u32(host.faces.size());
     dev.numBvhNodes      = u32(host.bvhNodes.size());
@@ -58,6 +62,8 @@ namespace mps::host {
     delete[] dev.voxelBandIndex;
     delete[] dev.voxelBandValue;
     delete[] dev.lights;
+    delete[] dev.kernelSigma;
+    delete[] dev.kernelLength;
     dev = core::SceneDevice{};
   }
 
@@ -78,6 +84,13 @@ namespace mps::host {
     m.voxelMean.bandValue = dev.voxelBandValue;
     m.voxelMean.bandCount = dev.voxelBandCount;
     m.voxelMean.res       = dev.voxelRes;
+  }
+
+  void bindKernelField(core::Medium& m, const core::SceneDevice& dev) {
+    m.kernelField.sigma  = dev.kernelSigma;
+    m.kernelField.length = dev.kernelLength;
+    m.kernelField.res    = dev.kernelRes;
+    // origin / cellSize are set by the scene builder.
   }
 
 }

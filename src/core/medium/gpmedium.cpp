@@ -10,7 +10,7 @@ namespace mps::core {
   namespace {
 
     MPHD MPINL SEKernel       kernelOf(const Medium& m) { return {m.sigma, m.lengthScale, m.kernelRadius}; }
-    MPHD MPINL SparseConvNoise noiseOf(const Medium& m) { return {kernelOf(m), m.impulseDensity, m.kernelRadius}; }
+    MPHD MPINL SparseConvNoise noiseOf(const Medium& m) { return {kernelOf(m), m.impulseDensity, m.kernelRadius, &m.kernelField}; }
 
     MPHD MPINL f32 meanEval(const Medium& m, const vec3f& p) {
       if (m.meanType == MeanType::Mesh) return m.meshMean.eval(p);
@@ -50,7 +50,7 @@ namespace mps::core {
 
     if (!use1DNoise(m)) return noise.eval(p, seed);
 
-    const vec2f n1 = noise.eval1D(t, seed);   // {ψ, ∂ψ/∂t}
+    const vec2f n1 = noise.eval1D(p, t, seed);   // {ψ, ∂ψ/∂t}
     const f32   L  = m.lengthScale.x;         // isotropic: all components equal
 
     // Orthonormal tangent frame {t1, t2, d} with d as the z axis.

@@ -20,4 +20,7 @@ namespace mps::host {
   // cellSize and band are already set on m.voxelMean by the scene builder).
   void bindVoxelMean(core::Medium& m, const core::SceneDevice& dev);
 
+  // Point a Medium's non-stationary kernel field at the device grids.
+  void bindKernelField(core::Medium& m, const core::SceneDevice& dev);
+
 }

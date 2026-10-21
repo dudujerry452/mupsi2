@@ -10,6 +10,42 @@
 
 namespace mps::host {
 
+  namespace {
+
+    // Procedural non-stationary kernel field for Eq. 25 testing: length scale L
+    // ramps linearly with height (fine at the bottom, coarse at the top); σ is
+    // constant. Written into cfg.host.kernel* and cfg.medium.kernelField.
+    void buildTestKernelField(SceneConfig& cfg, const core::AABB& bounds, u32 res,
+                              f32 baseSigma, f32 baseLength) {
+      const vec3f diag = bounds.diagonal();
+      const f32 maxExtent = mps::maxf(diag.x, mps::maxf(diag.y, diag.z));
+      const f32 cellSize = (res > 0) ? maxExtent / f32(res) : 1.0f;
+      const f32 minY = bounds.min.y, maxY = bounds.max.y;
+
+      cfg.host.kernelRes = res;
+      cfg.host.kernelSigma.assign(size_t(res) * res * res, 0.0f);
+      cfg.host.kernelLength.assign(size_t(res) * res * res, 0.0f);
+
+      for (u32 k = 0; k < res; ++k)
+        for (u32 j = 0; j < res; ++j)
+          for (u32 i = 0; i < res; ++i) {
+            const f32 y = minY + f32(j) * cellSize;
+            const f32 t = (maxY > minY) ? (y - minY) / (maxY - minY) : 0.5f;
+            const f32 L = baseLength * (0.5f + 1.5f * t);
+            const size_t idx = size_t(i) + res * (size_t(j) + res * size_t(k));
+            cfg.host.kernelSigma[idx]  = baseSigma;
+            cfg.host.kernelLength[idx] = L;
+          }
+
+      cfg.medium.kernelField.origin   = bounds.min;
+      cfg.medium.kernelField.cellSize = cellSize;
+      cfg.medium.kernelField.res      = res;
+      mplog("buildTestKernelField: res={} L in [{:.2f}, {:.2f}]", res,
+            baseLength * 0.5f, baseLength * 2.0f);
+    }
+
+  } // namespace
+
   SceneConfig buildDefaultScene(i32 w, i32 h) {
     SceneConfig cfg;
 
@@ -60,7 +96,8 @@ namespace mps::host {
 
   SceneConfig buildMeshGpScene(const std::string& objPath, i32 w, i32 h,
                                f32 dist, f32 targetRadius, core::GPMode mode,
-                               f32 sigma, f32 kernelRadius, bool useVoxel, u32 voxelRes) {
+                               f32 sigma, f32 kernelRadius, bool useVoxel, u32 voxelRes,
+                               bool nonStationary) {
     SceneConfig cfg;
 
     cfg.settings.maxBounce = 10;
@@ -132,6 +169,13 @@ namespace mps::host {
       m.voxelMean.band     = vg.band;
       m.voxelMean.res      = vg.res;
       m.meanType           = core::MeanType::Voxel;
+    }
+
+    if (nonStationary) {
+      // Non-stationary kernel field over the same world bounds.
+      core::AABB worldBox2 = core::AABB::empty();
+      for (const vec3f& v : worldVerts) worldBox2.extend(v);
+      buildTestKernelField(cfg, worldBox2, 64, sigma, kernelRadius);
     }
 
     // ——— wrapper sphere (transparent, holds the medium) ———

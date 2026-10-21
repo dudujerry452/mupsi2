@@ -34,6 +34,11 @@ namespace mps::core {
     u32        numLights = 0;
     AreaLight* lights    = nullptr;
 
+    // Non-stationary kernel field (σ and L grids, res^3 each).
+    f32* kernelSigma  = nullptr;
+    f32* kernelLength = nullptr;
+    u32  kernelRes    = 0;
+
     // Element counts of the shared arrays above (needed for backend upload).
     u32 numVertices      = 0;
     u32 numFaces         = 0;   // count of u32 entries (3 × triangles)
@@ -60,6 +65,11 @@ namespace mps::core {
 
     // Emissive area lights.
     std::vector<AreaLight> lights;
+
+    // Non-stationary kernel field (σ and L grids).
+    std::vector<f32> kernelSigma;
+    std::vector<f32> kernelLength;
+    u32 kernelRes = 0;
 
     void addSphere(const vec3f& center, f32 radius, u16 bsdfId, u16 mediumId, u16 lightId);
     void addLight(const vec3f& center, f32 radius, const RGB_F32& emission);

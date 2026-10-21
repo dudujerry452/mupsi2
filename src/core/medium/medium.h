@@ -4,6 +4,7 @@
 #include "core/geometry/ray.h"
 #include "core/math/math_util.h"
 #include "core/gp/meanfunction.h"
+#include "core/gp/kernelfield.h"
 
 namespace mps::core {
 
@@ -47,6 +48,10 @@ namespace mps::core {
     // Sparse narrow-band SDF mean (used when meanType == MeanType::Voxel).
     // Built on the host from the mesh, uploaded + re-bound like meshMean.
     SparseSDFGrid voxelMean;
+
+    // Non-stationary kernel field (paper Eq. 25, isotropic scaling): spatially
+    // varying σ and L, trilinearly interpolated at query points.
+    KernelField kernelField;
 
     // Bounding (wrapper) sphere: the medium only lives inside it, so ray
     // marching is clamped to the far intersection with this sphere.

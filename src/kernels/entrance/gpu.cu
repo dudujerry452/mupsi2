@@ -58,6 +58,8 @@ namespace mps::kernels {
     u32*          d_voxelBandIndex = upload(h.voxelBandIndex, h.voxelBandCount);
     f32*          d_voxelBandValue = upload(h.voxelBandValue, h.voxelBandCount);
     core::AreaLight* d_lights      = upload(h.lights, h.numLights);
+    f32* d_kernelSigma  = upload(h.kernelSigma, h.kernelRes * h.kernelRes * h.kernelRes);
+    f32* d_kernelLength = upload(h.kernelLength, h.kernelRes * h.kernelRes * h.kernelRes);
 
     core::SceneDevice d_scene;
     d_scene.numSpheres = h.numSpheres;
@@ -76,6 +78,9 @@ namespace mps::kernels {
     d_scene.voxelBandCount = h.voxelBandCount;
     d_scene.lights    = d_lights;
     d_scene.numLights = h.numLights;
+    d_scene.kernelSigma  = d_kernelSigma;
+    d_scene.kernelLength = d_kernelLength;
+    d_scene.kernelRes    = h.kernelRes;
     d_scene.numVertices      = h.numVertices;
     d_scene.numFaces         = h.numFaces;
     d_scene.numBvhNodes      = h.numBvhNodes;
@@ -96,6 +101,9 @@ namespace mps::kernels {
       d_medium.voxelMean.bandCount = d_scene.voxelBandCount;
       d_medium.voxelMean.res       = d_scene.voxelRes;
     }
+    d_medium.kernelField.sigma  = d_scene.kernelSigma;
+    d_medium.kernelField.length = d_scene.kernelLength;
+    d_medium.kernelField.res    = d_scene.kernelRes;
 
     // ——— 2b. environment map upload ———
     core::EnvMap d_envMap;
@@ -132,6 +140,8 @@ namespace mps::kernels {
     cudaFree(d_voxelBandIndex);
     cudaFree(d_voxelBandValue);
     cudaFree(d_lights);
+    cudaFree(d_kernelSigma);
+    cudaFree(d_kernelLength);
     cudaFree(d_envPixels);
 
     mplogtag("cuda", "render {}x{} spp={} done", w, hh, spp);

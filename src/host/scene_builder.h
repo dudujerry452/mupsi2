@@ -30,7 +30,8 @@ namespace mps::host {
                                f32 dist = 500.0f, f32 targetRadius = 150.0f,
                                core::GPMode mode = core::GPMode::SingleRealization,
                                f32 sigma = 1.0f, f32 kernelRadius = 1.0f,
-                               bool useVoxel = true, u32 voxelRes = 256);
+                               bool useVoxel = true, u32 voxelRes = 256,
+                               bool nonStationary = false);
 
   // Convenience scenes (paths under ~/models).
   SceneConfig buildSpotGpScene (i32 w = 256, i32 h = 256);
