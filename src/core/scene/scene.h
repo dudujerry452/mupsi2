@@ -20,6 +20,7 @@ namespace mps::core {
     u32*      faces          = nullptr;  // all mesh triangles (3×u32 each)
     BVHNode*  bvhNodes       = nullptr;
     u32*      bvhTriIndices  = nullptr;  // global face indices
+    vec3f*    vertexNormals  = nullptr;  // angle-weighted pseudo-normals (parallel to vertices)
 
     // Element counts of the shared arrays above (needed for backend upload).
     u32 numVertices      = 0;
@@ -37,6 +38,7 @@ namespace mps::core {
     std::vector<u32>    faces;
     std::vector<BVHNode> bvhNodes;
     std::vector<u32>     bvhTriIndices;
+    std::vector<vec3f>  vertexNormals;   // angle-weighted pseudo-normals (parallel to vertices)
 
     void addSphere(const vec3f& center, f32 radius, u16 bsdfId, u16 mediumId, u16 lightId);
     // vertices/faces must be world-space.

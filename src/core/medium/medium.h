@@ -45,6 +45,10 @@ namespace mps::core {
     vec3f boundCenter{0.0f, 0.0f, 0.0f};
     f32   boundRadius = 1.0f;
 
+    // Characteristic scene length (≈ object radius). Scale-aware marching
+    // constants in constant.h are multiplied by this at the use site.
+    f32 sceneScale = 1.0f;
+
     f32   sigma = 1.0f;
     vec3f lengthScale{1.0f, 1.0f, 1.0f};
     f32   kernelRadius = 1.0f;

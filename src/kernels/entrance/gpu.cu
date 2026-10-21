@@ -53,6 +53,7 @@ namespace mps::kernels {
     u32*          d_faces         = upload(h.faces, h.numFaces);
     core::BVHNode* d_bvhNodes     = upload(h.bvhNodes, h.numBvhNodes);
     u32*          d_bvhTriIndices = upload(h.bvhTriIndices, h.numBvhTriIndices);
+    vec3f*        d_vertexNormals = upload(h.vertexNormals, h.numVertices);
 
     core::SceneDevice d_scene;
     d_scene.numSpheres = h.numSpheres;
@@ -63,6 +64,7 @@ namespace mps::kernels {
     d_scene.faces          = d_faces;
     d_scene.bvhNodes       = d_bvhNodes;
     d_scene.bvhTriIndices  = d_bvhTriIndices;
+    d_scene.vertexNormals  = d_vertexNormals;
     d_scene.numVertices      = h.numVertices;
     d_scene.numFaces         = h.numFaces;
     d_scene.numBvhNodes      = h.numBvhNodes;
@@ -75,6 +77,7 @@ namespace mps::kernels {
       d_medium.meshMean.faces         = d_scene.faces;
       d_medium.meshMean.bvhNodes      = d_scene.bvhNodes;
       d_medium.meshMean.bvhTriIndices = d_scene.bvhTriIndices;
+      d_medium.meshMean.vertexNormals = d_scene.vertexNormals;
     }
 
     // ——— 3. output framebuffer (device) ———
@@ -99,6 +102,7 @@ namespace mps::kernels {
     cudaFree(d_faces);
     cudaFree(d_bvhNodes);
     cudaFree(d_bvhTriIndices);
+    cudaFree(d_vertexNormals);
 
     mplogtag("cuda", "render {}x{} spp={} done", w, hh, spp);
   }

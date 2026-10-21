@@ -27,6 +27,7 @@ namespace mps::host {
     dev.faces         = copyArray(host.faces);
     dev.bvhNodes      = copyArray(host.bvhNodes);
     dev.bvhTriIndices = copyArray(host.bvhTriIndices);
+    dev.vertexNormals = copyArray(host.vertexNormals);
 
     dev.numVertices      = u32(host.vertices.size());
     dev.numFaces         = u32(host.faces.size());
@@ -43,6 +44,7 @@ namespace mps::host {
     delete[] dev.faces;
     delete[] dev.bvhNodes;
     delete[] dev.bvhTriIndices;
+    delete[] dev.vertexNormals;
     dev = core::SceneDevice{};
   }
 
@@ -51,6 +53,7 @@ namespace mps::host {
     m.meshMean.faces          = dev.faces;
     m.meshMean.bvhNodes       = dev.bvhNodes;
     m.meshMean.bvhTriIndices  = dev.bvhTriIndices;
+    m.meshMean.vertexNormals  = dev.vertexNormals;
     m.meshMean.bvhRoot        = ref.bvhRoot;
     m.meshMean.bvhNodeOffset  = ref.bvhNodeOffset;
     m.meshMean.bvhTriOffset   = ref.bvhTriOffset;

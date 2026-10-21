@@ -9,12 +9,12 @@
 
 namespace mps::host {
 
-  SceneConfig buildDefaultScene() {
+  SceneConfig buildDefaultScene(i32 w, i32 h) {
     SceneConfig cfg;
 
     cfg.settings.maxBounce = 10;
-    cfg.settings.eps      = 1e-3f;
-    cfg.settings.nearEps  = 1e-2f;
+    cfg.settings.eps      = core::EPS_SURFACE;
+    cfg.settings.nearEps  = core::EPS_NEAR;
     cfg.spp = 1;
 
     // ——— GP medium (sphere mean, sparse SE convolution noise) ———
@@ -25,6 +25,7 @@ namespace mps::host {
     m.meanRadius   = 150.0f;
     m.boundCenter  = {0.0f, 0.0f, -500.0f};
     m.boundRadius  = 170.0f;                 // wrapper, ≥ mean + a few σ
+    m.sceneScale   = 150.0f;                 // ≈ object radius
     m.sigma        = 5.0f;
     m.lengthScale  = {1.0f, 1.0f, 1.0f};
     m.kernelRadius = 3.0f;                   // cell size
@@ -42,65 +43,82 @@ namespace mps::host {
                        u16(core::BsdfType::Lambertian), core::NO_MEDIUM, core::NO_LIGHT);
 
     // ——— camera ———
-    const i32 w = 160, h = 120;
     cfg.camera = core::makeCamera({0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f},
                                   45.0f, w, h);
 
     return cfg;
   }
 
-  SceneConfig buildSpotGpScene() {
+  SceneConfig buildMeshGpScene(const std::string& objPath, i32 w, i32 h,
+                               f32 dist, f32 targetRadius, core::GPMode mode,
+                               f32 sigma, f32 kernelRadius) {
     SceneConfig cfg;
 
     cfg.settings.maxBounce = 10;
-    cfg.settings.eps      = 1e-3f;
-    cfg.settings.nearEps  = 1e-2f;
+    cfg.settings.eps      = core::EPS_SURFACE;
+    cfg.settings.nearEps  = core::EPS_NEAR;
     cfg.spp = 1;
 
-    // ——— load + transform the spot mesh (world space = obj * scale + pos) ———
-    const char* path = "/home/dudujerry/models/spot/spot_triangulated_good.obj";
-    const f32 scale = 110.0f;
-    const vec3f pos = {0.0f, 0.0f, -500.0f};
-
     ObjMesh obj;
-    if (!loadObj(path, obj)) {
-      mplog("buildSpotGpScene: failed to load {}", path);
+    if (!loadObj(objPath, obj)) {
+      mplog("buildMeshGpScene: failed to load {}", objPath);
       return cfg;
     }
 
+    // Auto-fit: center the mesh and scale it into a sphere of `targetRadius`.
+    core::AABB box = core::AABB::empty();
+    for (const vec3f& v : obj.vertices) box.extend(v);
+    const vec3f center = box.centroid();
+    const vec3f diag   = box.diagonal();
+    const f32 diagLen  = mps::norm(diag);
+    const f32 scale    = (diagLen > 0.0f) ? (2.0f * targetRadius / diagLen) : 1.0f;
+    const vec3f pos    = {0.0f, 0.0f, -dist};
+
     std::vector<vec3f> worldVerts(obj.vertices.size());
     for (size_t i = 0; i < obj.vertices.size(); ++i)
-      worldVerts[i] = obj.vertices[i] * scale + pos;
+      worldVerts[i] = (obj.vertices[i] - center) * scale + pos;
 
     const u32 nt = u32(obj.faces.size() / 3);
     cfg.host.addMeshMean(worldVerts.data(), u32(worldVerts.size()), obj.faces.data(), nt);
-    mplog("buildSpotGpScene: spot mesh {} verts {} tris", worldVerts.size(), nt);
+    mplog("buildMeshGpScene: {} verts {} tris (scale {:.3f})", worldVerts.size(), nt, scale);
 
     // ——— GP medium: mesh mean + sparse SE convolution noise ———
     core::Medium& m = cfg.medium;
     m.type         = core::MediumType::GP;
     m.meanType     = core::MeanType::Mesh;
-    m.meanCenter   = {0.0f, 0.0f, 0.0f};     // unused for mesh mean
-    m.meanRadius   = 1.0f;                   // unused for mesh mean
-    m.boundCenter  = {0.0f, 0.0f, -500.0f};
-    m.boundRadius  = 200.0f;                 // wrapper sphere around the scaled spot
-    m.sigma        = 1.0f;
+    m.boundCenter  = pos;
+    m.boundRadius  = targetRadius * 1.4f;
+    m.sceneScale   = targetRadius;
+    m.sigma        = sigma;
     m.lengthScale  = {1.0f, 1.0f, 1.0f};
-    m.kernelRadius = 1.0f;                   // cell size (matches original spot scene)
-    m.impulseDensity = 3;                    // points_per_cell
-    m.gpMode       = core::GPMode::SingleRealization;
+    m.kernelRadius = kernelRadius;
+    m.impulseDensity = 3;
+    m.gpMode       = mode;
     cfg.hasMedium  = true;
 
     // ——— wrapper sphere (transparent, holds the medium) ———
-    cfg.host.addSphere({0.0f, 0.0f, -500.0f}, 200.0f,
-                       u16(core::BsdfType::Null), 0, core::NO_LIGHT);
+    cfg.host.addSphere(pos, m.boundRadius, u16(core::BsdfType::Null), 0, core::NO_LIGHT);
 
-    // ——— camera: straight ahead, object centered on -z ———
-    const i32 w = 256, h = 256;
+    // ——— camera: straight ahead ———
     cfg.camera = core::makeCamera({0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f},
                                   45.0f, w, h);
 
     return cfg;
+  }
+
+  SceneConfig buildSpotGpScene(i32 w, i32 h) {
+    return buildMeshGpScene("/home/dudujerry/models/spot/spot_triangulated_good.obj",
+                            w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, 1.0f, 1.0f);
+  }
+
+  SceneConfig buildBunnyGpScene(i32 w, i32 h) {
+    return buildMeshGpScene("/home/dudujerry/models/bunny/bunny.obj",
+                            w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, 1.0f, 1.0f);
+  }
+
+  SceneConfig buildDragonGpScene(i32 w, i32 h) {
+    return buildMeshGpScene("/home/dudujerry/models/dragon.obj",
+                            w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, 1.0f, 1.0f);
   }
 
 }

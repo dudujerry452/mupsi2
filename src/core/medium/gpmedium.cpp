@@ -3,6 +3,7 @@
 #include "core/gp/gpnoise.h"
 #include "core/gp/meanfunction.h"
 #include "core/math/random.h"
+#include "core/tracer/constant.h"
 
 namespace mps::core {
 
@@ -18,6 +19,10 @@ namespace mps::core {
     MPHD MPINL vec3f meanGrad(const Medium& m, const vec3f& p) {
       if (m.meanType == MeanType::Mesh) return m.meshMean.gradient(p);
       return SphereMean{m.meanCenter, m.meanRadius}.gradient(p);
+    }
+    MPHD MPINL vec4f meanEvalGrad(const Medium& m, const vec3f& p) {
+      if (m.meanType == MeanType::Mesh) return m.meshMean.evalGrad(p);
+      return SphereMean{m.meanCenter, m.meanRadius}.evalGrad(p);
     }
 
     MPHD MPINL bool signPos(f32 x) { return x > 0.0f; }
@@ -37,11 +42,10 @@ namespace mps::core {
   MPHD vec4f gpEvalGrad(const vec3f& p, u32 seed, const Medium& m) {
     SparseConvNoise noise = noiseOf(m);
 
-    f32 mu = meanEval(m, p);
-    vec3f mug = meanGrad(m, p);
+    vec4f mg  = meanEvalGrad(m, p);    // {μ, ∇μ} in one query
     vec4f psi = noise.eval(p, seed);   // {ψ, ∇ψ}
 
-    return {mu + psi.x, mug.x + psi.y, mug.y + psi.z, mug.z + psi.w};
+    return {mg.x + psi.x, mg.y + psi.y, mg.z + psi.z, mg.w + psi.w};
   }
 
   // {f_cond, ∇f_cond} with the Renewal+ correction
@@ -68,11 +72,11 @@ namespace mps::core {
   MPHD bool gpSampleDistance(const Ray& ray, const Medium& m, const GPConditioningState& c,
                              u32 seed, MediumSample& out) {
     f32 nt = ray.min;
-    f32 ft = mps::minf(ray.max, 2000.0f);
+    f32 ft = mps::minf(ray.max, m.sceneScale * MARCH_FAR_CLAMP_FRAC);
 
-    const i32 minDepth = 100;
-    const f32 maxDt   = 0.5f;
-    f32 dt = mps::minf(maxDt, (ft - nt) / f32(minDepth));
+    const f32 maxDt   = m.sceneScale * MARCH_MAX_DT_FRAC;
+    const f32 signEps = m.sceneScale * MARCH_SIGN_EPS_FRAC;
+    f32 dt = mps::minf(maxDt, (ft - nt) / f32(MARCH_MIN_DEPTH));
 
     f32 t = nt;
     f32 fPrev = gpEvalCond(ray.o, seed, m, c);
@@ -83,7 +87,7 @@ namespace mps::core {
       f32 fC = gpEvalCond(p, seed, m, c);
 
       // Sign flip across a finite gap → zero crossing between (t-dt, t].
-      if (signPos(fC) != signPos(fPrev) && mps::fabsf(fPrev - fC) > 1e-6f) {
+      if (signPos(fC) != signPos(fPrev) && mps::fabsf(fPrev - fC) > signEps) {
         // Linear-interpolated candidate, stepped back toward the crossing.
         f32 factor = fPrev / (fPrev - fC);
         do {
@@ -113,11 +117,11 @@ namespace mps::core {
 
   MPHD RGB_F32 gpTransmittance(const Ray& ray, const Medium& m, const GPConditioningState& c, u32 seed) {
     f32 nt = ray.min;
-    f32 ft = mps::minf(ray.max, 2000.0f);
+    f32 ft = mps::minf(ray.max, m.sceneScale * MARCH_FAR_CLAMP_FRAC);
 
-    const i32 minDepth = 100;
-    const f32 maxDt   = 0.5f;
-    f32 dt = mps::minf(maxDt, (ft - nt) / f32(minDepth));
+    const f32 maxDt   = m.sceneScale * MARCH_MAX_DT_FRAC;
+    const f32 signEps = m.sceneScale * MARCH_SIGN_EPS_FRAC;
+    f32 dt = mps::minf(maxDt, (ft - nt) / f32(MARCH_MIN_DEPTH));
 
     f32 t = nt;
     f32 fPrev = gpEvalCond(ray.o, seed, m, c);
@@ -126,7 +130,7 @@ namespace mps::core {
       vec3f p = ray.at(t);
       f32 fC = gpEvalCond(p, seed, m, c);
 
-      if (signPos(fC) != signPos(fPrev) && mps::fabsf(fPrev - fC) > 1e-6f)
+      if (signPos(fC) != signPos(fPrev) && mps::fabsf(fPrev - fC) > signEps)
         return {0.0f, 0.0f, 0.0f}; // opaque
 
       fPrev = fC;

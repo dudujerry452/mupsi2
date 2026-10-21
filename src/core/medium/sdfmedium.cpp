@@ -1,6 +1,7 @@
 #include "core/medium/sdfmedium.h"
 
 #include "core/gp/meanfunction.h"
+#include "core/tracer/constant.h"
 
 namespace mps::core {
 
@@ -14,10 +15,10 @@ namespace mps::core {
 
     SphereMean mean = meanOf(m);
     f32 nt = ray.min;
-    f32 ft = mps::minf(ray.max, 2000.0f);
+    f32 ft = mps::minf(ray.max, m.sceneScale * MARCH_FAR_CLAMP_FRAC);
 
-    const f32 minStep = 1e-3f;
-    const i32 maxIter = 512;
+    const f32 minStep = m.sceneScale * SDF_MIN_STEP_FRAC;
+    const i32 maxIter = SDF_MAX_ITER;
 
     f32 t = nt;
     f32 fPrev = mean.eval(ray.o);
@@ -31,7 +32,7 @@ namespace mps::core {
       if ((fPrev > 0.0f) != (fC > 0.0f)) {
         f32 lo = tPrev, hi = t;
         f32 fLo = fPrev;
-        for (i32 b = 0; b < 16; ++b) {
+        for (i32 b = 0; b < SDF_BISECT; ++b) {
           f32 mid = 0.5f * (lo + hi);
           f32 fMid = mean.eval(ray.at(mid));
           if ((fLo > 0.0f) == (fMid > 0.0f)) { lo = mid; fLo = fMid; }
@@ -59,10 +60,10 @@ namespace mps::core {
 
     SphereMean mean = meanOf(m);
     f32 nt = ray.min;
-    f32 ft = mps::minf(ray.max, 2000.0f);
+    f32 ft = mps::minf(ray.max, m.sceneScale * MARCH_FAR_CLAMP_FRAC);
 
-    const f32 minStep = 1e-3f;
-    const i32 maxIter = 512;
+    const f32 minStep = m.sceneScale * SDF_MIN_STEP_FRAC;
+    const i32 maxIter = SDF_MAX_ITER;
 
     f32 t = nt;
     f32 fPrev = mean.eval(ray.o);

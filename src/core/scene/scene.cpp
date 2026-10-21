@@ -19,6 +19,35 @@ namespace mps::core {
 
   namespace {
 
+    // Angle-weighted pseudo-normals (Bærentzen & Aanæs 2005). Robust outward
+    // direction even for open meshes / locally-flipped faces; used by MeshMean
+    // to sign the SDF.
+    void computeAngleWeightedNormals(const vec3f* V, const u32* tris, u32 nt, u32 nv, vec3f* outN) {
+      for (u32 i = 0; i < nv; ++i) outN[i] = {0.0f, 0.0f, 0.0f};
+      for (u32 fi = 0; fi < nt; ++fi) {
+        const u32 i0 = tris[3 * fi + 0], i1 = tris[3 * fi + 1], i2 = tris[3 * fi + 2];
+        const vec3f a = V[i0], b = V[i1], c = V[i2];
+        vec3f n = mps::cross(b - a, c - a);
+        const f32 nlen = mps::norm(n);
+        if (nlen < 1e-12f) continue;
+        n = n * (1.0f / nlen);
+
+        auto angleAt = [&](const vec3f& v, const vec3f& o1, const vec3f& o2) {
+          const vec3f e1 = mps::normalize(o1 - v);
+          const vec3f e2 = mps::normalize(o2 - v);
+          return mps::acosf(mps::clampf(mps::dot(e1, e2), -1.0f, 1.0f));
+        };
+        outN[i0] = outN[i0] + n * angleAt(a, b, c);
+        outN[i1] = outN[i1] + n * angleAt(b, a, c);
+        outN[i2] = outN[i2] + n * angleAt(c, a, b);
+      }
+      for (u32 i = 0; i < nv; ++i) {
+        const f32 nl = mps::norm(outN[i]);
+        if (nl > 1e-12f) outN[i] = outN[i] * (1.0f / nl);
+        else outN[i] = {0.0f, 0.0f, 1.0f};
+      }
+    }
+
     // Append world-space triangle soup to the shared arrays and build its BVH.
     // Returns the Mesh metadata (offsets + root). Does not register it anywhere.
     Mesh buildMeshData(SceneHost& h, const vec3f* verts, u32 nv, const u32* tris, u32 nt,
@@ -47,6 +76,13 @@ namespace mps::core {
       for (u32 i = 0; i < 3 * nt; ++i)
         h.faces.push_back(tris[i] + m.vertexOffset);  // global vertex indices
       m.info.bounds = box;
+
+      // Angle-weighted pseudo-normals, parallel to h.vertices.
+      {
+        std::vector<vec3f> nrm(nv);
+        computeAngleWeightedNormals(verts, tris, nt, nv, nrm.data());
+        h.vertexNormals.insert(h.vertexNormals.end(), nrm.begin(), nrm.end());
+      }
 
       BVH bvh;
       bvh.build(h.vertices.data(), h.faces.data() + m.faceOffset, nt);
