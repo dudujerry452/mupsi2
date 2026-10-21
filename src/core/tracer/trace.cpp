@@ -13,6 +13,7 @@ namespace mps::core {
     // GPIS surface color by the selected texturing approach.
     MPHD MPINL RGB_F32 colorSample(const vec3f& p, const Medium& m) {
       const ColorMethod cm = ColorMethod(m.colorMethod);
+      if (cm == ColorMethod::HeatKernel && !m.heatKernel.empty()) return m.heatKernel.evalColor(p);
       if (cm == ColorMethod::Voxel && !m.colorGrid.empty()) return m.colorGrid.eval(p);
       const vec3f mn = m.colorGrid.origin;
       const vec3f mx = m.colorGrid.origin +

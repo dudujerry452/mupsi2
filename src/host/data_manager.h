@@ -26,4 +26,9 @@ namespace mps::host {
   // Point a Medium's dense RGB color grid at the device array.
   void bindColorGrid(core::Medium& m, const core::SceneDevice& dev);
 
+  // Point a Medium's heat-kernel texture (HKTEx) at the device spectral arrays
+  // and the shared mesh geometry (the per-mesh BVH offsets must be set by the
+  // caller from the SceneHost::meshMeans entry).
+  void bindHeatKernel(core::Medium& m, const core::SceneDevice& dev);
+
 }

@@ -61,6 +61,12 @@ namespace mps::kernels {
     f32* d_kernelSigma  = upload(h.kernelSigma, h.kernelRes * h.kernelRes * h.kernelRes);
     f32* d_kernelLength = upload(h.kernelLength, h.kernelRes * h.kernelRes * h.kernelRes);
     RGB_F32* d_colorGrid = upload(h.colorGrid, h.colorRes * h.colorRes * h.colorRes);
+    f32* d_heatPhi = upload(h.heatPhi, h.heatN * h.heatK);
+    f32* d_heatLam = upload(h.heatLam, h.heatK);
+    f32* d_heatKernelPhi = upload(h.heatKernelPhi, h.heatS * h.heatK);
+    RGB_F32* d_heatKernelColor = upload(h.heatKernelColor, h.heatS);
+    f32* d_heatKernelTau = upload(h.heatKernelTau, h.heatS);
+    f32* d_heatKernelSharp = upload(h.heatKernelSharp, h.heatS);
 
     core::SceneDevice d_scene;
     d_scene.numSpheres = h.numSpheres;
@@ -84,6 +90,12 @@ namespace mps::kernels {
     d_scene.kernelRes    = h.kernelRes;
     d_scene.colorGrid = d_colorGrid;
     d_scene.colorRes  = h.colorRes;
+    d_scene.heatPhi = d_heatPhi; d_scene.heatLam = d_heatLam;
+    d_scene.heatKernelPhi = d_heatKernelPhi; d_scene.heatKernelColor = d_heatKernelColor;
+    d_scene.heatKernelTau = d_heatKernelTau; d_scene.heatKernelSharp = d_heatKernelSharp;
+    d_scene.heatN = h.heatN; d_scene.heatK = h.heatK; d_scene.heatS = h.heatS;
+    d_scene.heatT = h.heatT; d_scene.heatBhSigma = h.heatBhSigma;
+    d_scene.heatMeanColor = h.heatMeanColor;
     d_scene.numVertices      = h.numVertices;
     d_scene.numFaces         = h.numFaces;
     d_scene.numBvhNodes      = h.numBvhNodes;
@@ -109,6 +121,20 @@ namespace mps::kernels {
     d_medium.kernelField.res    = d_scene.kernelRes;
     d_medium.colorGrid.data = d_scene.colorGrid;
     d_medium.colorGrid.res  = d_scene.colorRes;
+    d_medium.heatKernel.phi         = d_scene.heatPhi;
+    d_medium.heatKernel.lam         = d_scene.heatLam;
+    d_medium.heatKernel.kernelPhi   = d_scene.heatKernelPhi;
+    d_medium.heatKernel.kernelColor = d_scene.heatKernelColor;
+    d_medium.heatKernel.kernelTau   = d_scene.heatKernelTau;
+    d_medium.heatKernel.kernelSharp = d_scene.heatKernelSharp;
+    d_medium.heatKernel.N = d_scene.heatN; d_medium.heatKernel.K = d_scene.heatK;
+    d_medium.heatKernel.S = d_scene.heatS; d_medium.heatKernel.t = d_scene.heatT;
+    d_medium.heatKernel.bhSigma = d_scene.heatBhSigma;
+    d_medium.heatKernel.meanColor = d_scene.heatMeanColor;
+    d_medium.heatKernel.vertices      = d_scene.vertices;
+    d_medium.heatKernel.faces         = d_scene.faces;
+    d_medium.heatKernel.bvhNodes      = d_scene.bvhNodes;
+    d_medium.heatKernel.bvhTriIndices = d_scene.bvhTriIndices;
 
     // ——— 2b. environment map upload ———
     core::EnvMap d_envMap;
@@ -148,6 +174,12 @@ namespace mps::kernels {
     cudaFree(d_kernelSigma);
     cudaFree(d_kernelLength);
     cudaFree(d_colorGrid);
+    cudaFree(d_heatPhi);
+    cudaFree(d_heatLam);
+    cudaFree(d_heatKernelPhi);
+    cudaFree(d_heatKernelColor);
+    cudaFree(d_heatKernelTau);
+    cudaFree(d_heatKernelSharp);
     cudaFree(d_envPixels);
 
     mplogtag("cuda", "render {}x{} spp={} done", w, hh, spp);

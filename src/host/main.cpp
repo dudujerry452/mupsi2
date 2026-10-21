@@ -11,6 +11,7 @@
 #include "host/scene_builder.h"
 #include "host/data_manager.h"
 #include "host/hdr_loader.h"
+#include "host/heat_loader.h"
 #include "host/ppm_util.h"
 
 using namespace mps;
@@ -37,6 +38,7 @@ int main(int argc, char** argv) {
   const i32 sppArg = (argc > 6) ? std::atoi(argv[6]) : 0;
   const f32 sigmaArg = (argc > 7) ? std::atof(argv[7]) : 0.0f;
   const std::string colorArg = (argc > 8) ? argv[8] : "";
+  const std::string heatArg = (argc > 9) ? argv[9] : "";
 
   // 1. host staging
   mps::host::SceneConfig cfg;
@@ -76,9 +78,19 @@ int main(int argc, char** argv) {
   if (colorArg == "voxel")       cfg.medium.colorMethod = u16(core::ColorMethod::Voxel);
   else if (colorArg == "surface") cfg.medium.colorMethod = u16(core::ColorMethod::Surface);
   else if (colorArg == "kernel")  cfg.medium.colorMethod = u16(core::ColorMethod::Kernel);
+  else if (colorArg == "heatkernel") cfg.medium.colorMethod = u16(core::ColorMethod::HeatKernel);
   else if (!colorArg.empty()) {
-    std::cerr << "unknown color '" << colorArg << "' (use voxel|surface|kernel)\n";
+    std::cerr << "unknown color '" << colorArg << "' (use voxel|surface|kernel|heatkernel)\n";
     return 1;
+  }
+
+  // Load a precomputed HKTEx heat-kernel texture (tools/precompute_heat.py).
+  if (!heatArg.empty()) {
+    if (mps::host::loadHeatKernel(heatArg, cfg.host)) {
+      cfg.medium.colorMethod = u16(core::ColorMethod::HeatKernel);
+    }
+    else
+      return 1;
   }
 
   // 2. flatten to device POD arrays (CPU: plain heap; CUDA: cudaMalloc in the shell)
@@ -96,6 +108,14 @@ int main(int argc, char** argv) {
   }
   if (cfg.medium.colorGrid.res > 0) {
     mps::host::bindColorGrid(cfg.medium, device);
+  }
+  if (cfg.host.heatN > 0) {
+    mps::host::bindHeatKernel(cfg.medium, device);
+    if (!cfg.host.meshMeans.empty()) {
+      cfg.medium.heatKernel.bvhRoot       = cfg.host.meshMeans[0].bvhRoot;
+      cfg.medium.heatKernel.bvhNodeOffset = cfg.host.meshMeans[0].bvhNodeOffset;
+      cfg.medium.heatKernel.bvhTriOffset  = cfg.host.meshMeans[0].bvhTriOffset;
+    }
   }
 
   mps::core::RenderContext ctx{device, cfg.medium, cfg.hasMedium, cfg.settings};

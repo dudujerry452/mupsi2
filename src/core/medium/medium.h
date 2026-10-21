@@ -6,6 +6,7 @@
 #include "core/gp/meanfunction.h"
 #include "core/gp/kernelfield.h"
 #include "core/gp/colorfield.h"
+#include "core/gp/heatkernel.h"
 
 namespace mps::core {
 
@@ -58,6 +59,9 @@ namespace mps::core {
     // grid used by ColorMethod::Voxel.
     u16 colorMethod = u16(ColorMethod::Constant);
     ColorGrid colorGrid;
+
+    // Isotropic heat-kernel texture (HKTEx) for ColorMethod::HeatKernel.
+    HeatKernel heatKernel;
 
     // Bounding (wrapper) sphere: the medium only lives inside it, so ray
     // marching is clamped to the far intersection with this sphere.

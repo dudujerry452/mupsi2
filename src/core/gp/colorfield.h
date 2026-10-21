@@ -5,8 +5,8 @@
 
 namespace mps::core {
 
-  // Three GPIS texturing approaches (test branches).
-  enum class ColorMethod : u16 { Constant = 0, Voxel = 1, Surface = 2, Kernel = 3 };
+  // Three GPIS texturing approaches (test branches) + the heat-kernel (HKTEx).
+  enum class ColorMethod : u16 { Constant = 0, Voxel = 1, Surface = 2, Kernel = 3, HeatKernel = 4 };
 
   // Dense RGB voxel grid (approach 1): bake a 3D color field, trilinear lookup.
   struct ColorGrid {

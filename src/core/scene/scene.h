@@ -43,6 +43,18 @@ namespace mps::core {
     RGB_F32* colorGrid = nullptr;
     u32      colorRes  = 0;
 
+    // Heat-kernel texture (HKTEx) spectral data.
+    f32*      heatPhi         = nullptr;   // N*K
+    f32*      heatLam         = nullptr;   // K
+    f32*      heatKernelPhi   = nullptr;   // S*K
+    RGB_F32*  heatKernelColor = nullptr;   // S
+    f32*      heatKernelTau   = nullptr;   // S
+    f32*      heatKernelSharp = nullptr;   // S
+    u32 heatN = 0, heatK = 0, heatS = 0;
+    f32 heatT = 1e-2f;
+    f32 heatBhSigma = 0.1f;
+    RGB_F32 heatMeanColor{0.5f, 0.5f, 0.5f};
+
     // Element counts of the shared arrays above (needed for backend upload).
     u32 numVertices      = 0;
     u32 numFaces         = 0;   // count of u32 entries (3 × triangles)
@@ -78,6 +90,14 @@ namespace mps::core {
     // Dense RGB color voxel grid.
     std::vector<RGB_F32> colorGrid;
     u32 colorRes = 0;
+
+    // Heat-kernel texture (HKTEx) spectral data.
+    std::vector<f32> heatPhi, heatLam, heatKernelPhi, heatKernelTau, heatKernelSharp;
+    std::vector<RGB_F32> heatKernelColor;
+    u32 heatN = 0, heatK = 0, heatS = 0;
+    f32 heatT = 1e-2f;
+    f32 heatBhSigma = 0.1f;
+    RGB_F32 heatMeanColor{0.5f, 0.5f, 0.5f};
 
     void addSphere(const vec3f& center, f32 radius, u16 bsdfId, u16 mediumId, u16 lightId);
     void addLight(const vec3f& center, f32 radius, const RGB_F32& emission);

@@ -45,6 +45,16 @@ namespace mps::host {
     dev.colorGrid = copyArray(host.colorGrid);
     dev.colorRes  = host.colorRes;
 
+    dev.heatPhi         = copyArray(host.heatPhi);
+    dev.heatLam         = copyArray(host.heatLam);
+    dev.heatKernelPhi   = copyArray(host.heatKernelPhi);
+    dev.heatKernelColor = copyArray(host.heatKernelColor);
+    dev.heatKernelTau   = copyArray(host.heatKernelTau);
+    dev.heatKernelSharp = copyArray(host.heatKernelSharp);
+    dev.heatN = host.heatN; dev.heatK = host.heatK; dev.heatS = host.heatS;
+    dev.heatT = host.heatT; dev.heatBhSigma = host.heatBhSigma;
+    dev.heatMeanColor = host.heatMeanColor;
+
     dev.numVertices      = u32(host.vertices.size());
     dev.numFaces         = u32(host.faces.size());
     dev.numBvhNodes      = u32(host.bvhNodes.size());
@@ -68,6 +78,12 @@ namespace mps::host {
     delete[] dev.kernelSigma;
     delete[] dev.kernelLength;
     delete[] dev.colorGrid;
+    delete[] dev.heatPhi;
+    delete[] dev.heatLam;
+    delete[] dev.heatKernelPhi;
+    delete[] dev.heatKernelColor;
+    delete[] dev.heatKernelTau;
+    delete[] dev.heatKernelSharp;
     dev = core::SceneDevice{};
   }
 
@@ -101,6 +117,24 @@ namespace mps::host {
     m.colorGrid.data = dev.colorGrid;
     m.colorGrid.res  = dev.colorRes;
     // origin / cellSize are set by the scene builder.
+  }
+
+  void bindHeatKernel(core::Medium& m, const core::SceneDevice& dev) {
+    m.heatKernel.phi         = dev.heatPhi;
+    m.heatKernel.lam         = dev.heatLam;
+    m.heatKernel.kernelPhi   = dev.heatKernelPhi;
+    m.heatKernel.kernelColor = dev.heatKernelColor;
+    m.heatKernel.kernelTau   = dev.heatKernelTau;
+    m.heatKernel.kernelSharp = dev.heatKernelSharp;
+    m.heatKernel.N = dev.heatN; m.heatKernel.K = dev.heatK; m.heatKernel.S = dev.heatS;
+    m.heatKernel.t = dev.heatT; m.heatKernel.bhSigma = dev.heatBhSigma;
+    m.heatKernel.meanColor = dev.heatMeanColor;
+    // Mesh geometry pointers (vertices/faces/BVH) are bound below from the
+    // SceneDevice shared arrays.
+    m.heatKernel.vertices      = dev.vertices;
+    m.heatKernel.faces         = dev.faces;
+    m.heatKernel.bvhNodes      = dev.bvhNodes;
+    m.heatKernel.bvhTriIndices = dev.bvhTriIndices;
   }
 
 }
