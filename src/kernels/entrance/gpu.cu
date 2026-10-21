@@ -22,13 +22,13 @@ namespace mps::kernels {
 
     // One thread per pixel; spp loop is inside the thread (matches the CPU shell).
     __global__ void renderKernel(core::SceneDevice scene, core::Medium medium, bool hasMedium,
-                                 core::TraceSettings settings, core::Camera cam, i32 spp,
-                                 RGB_F32* fb) {
+                                 core::TraceSettings settings, core::EnvMap envMap,
+                                 core::Camera cam, i32 spp, RGB_F32* fb) {
       const i32 x = int(blockIdx.x * blockDim.x + threadIdx.x);
       const i32 y = int(blockIdx.y * blockDim.y + threadIdx.y);
       if (x >= cam.width || y >= cam.height) return;
 
-      core::RenderContext ctx{scene, medium, hasMedium, settings};
+      core::RenderContext ctx{scene, medium, hasMedium, settings, envMap};
 
       RGB_F32 acc{0.0f, 0.0f, 0.0f};
       for (i32 s = 0; s < spp; ++s) {
@@ -97,6 +97,13 @@ namespace mps::kernels {
       d_medium.voxelMean.res       = d_scene.voxelRes;
     }
 
+    // ——— 2b. environment map upload ———
+    core::EnvMap d_envMap;
+    d_envMap.width  = ctx.envMap.width;
+    d_envMap.height = ctx.envMap.height;
+    RGB_F32* d_envPixels = upload(ctx.envMap.pixels, u32(ctx.envMap.width * ctx.envMap.height));
+    d_envMap.pixels = d_envPixels;
+
     // ——— 3. output framebuffer (device) ———
     RGB_F32* d_fb = nullptr;
     cudaCheck(cudaMalloc(reinterpret_cast<void**>(&d_fb), fb.bytesize()));
@@ -104,7 +111,8 @@ namespace mps::kernels {
     // ——— 4. launch one thread per pixel ———
     dim3 block(16, 16);
     dim3 grid((u32(w) + block.x - 1) / block.x, (u32(hh) + block.y - 1) / block.y);
-    renderKernel<<<grid, block>>>(d_scene, d_medium, ctx.hasMedium, ctx.settings, cam, spp, d_fb);
+    renderKernel<<<grid, block>>>(d_scene, d_medium, ctx.hasMedium, ctx.settings, d_envMap,
+                                   cam, spp, d_fb);
     cudaCheckLast();
     cudaCheck(cudaDeviceSynchronize());
 
@@ -124,6 +132,7 @@ namespace mps::kernels {
     cudaFree(d_voxelBandIndex);
     cudaFree(d_voxelBandValue);
     cudaFree(d_lights);
+    cudaFree(d_envPixels);
 
     mplogtag("cuda", "render {}x{} spp={} done", w, hh, spp);
   }

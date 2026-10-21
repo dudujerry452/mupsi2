@@ -136,7 +136,7 @@ namespace mps::core {
       // ——— ray tracing branch: hard surfaces ———
       HitRecord hr = sceneIntersect(ray, ctx.scene);
       if (!hr.hit) {
-        emission += throughput * background(ray.dir);
+        emission += throughput * background(ray.dir, ctx.envMap);
         break;
       }
 

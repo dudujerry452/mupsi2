@@ -1,5 +1,6 @@
 #include <chrono>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <string>
 
@@ -8,6 +9,7 @@
 #include "kernels/entrance/dispatch.h"
 #include "host/scene_builder.h"
 #include "host/data_manager.h"
+#include "host/hdr_loader.h"
 #include "host/ppm_util.h"
 
 using namespace mps;
@@ -61,6 +63,19 @@ int main(int argc, char** argv) {
 
   mps::core::RenderContext ctx{device, cfg.medium, cfg.hasMedium, cfg.settings};
 
+  // Environment map (background/IBL).
+  mps::RGB_F32* envPixels = nullptr;
+  {
+    mps::host::HdrImage env = mps::host::loadHdr("/home/dudujerry/models/envmap.hdr");
+    if (env.width > 0 && env.height > 0) {
+      envPixels = new mps::RGB_F32[env.pixels.size()];
+      std::memcpy(envPixels, env.pixels.data(), env.pixels.size() * sizeof(mps::RGB_F32));
+      ctx.envMap.width  = env.width;
+      ctx.envMap.height = env.height;
+      ctx.envMap.pixels = envPixels;
+    }
+  }
+
   // 3. framebuffer
   const i32 W = cfg.camera.width, H = cfg.camera.height;
   mps::FrameBuffer<mps::RGB_F32> fb;
@@ -87,6 +102,7 @@ int main(int argc, char** argv) {
 
   delete[] fb.pixels;
   delete[] out.pixels;
+  delete[] envPixels;
   mps::host::freeDevice(device);
 
   mplog("done");
