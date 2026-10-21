@@ -1,9 +1,53 @@
 #include "core/tracer/trace.h"
 
 #include "core/bsdf/bsdf.h"
+#include "core/light/light.h"
 #include "core/math/random.h"
 
 namespace mps::core {
+
+  namespace {
+
+    // Direct lighting via next-event estimation (Tungsten-style light sampling):
+    // importance-sample a light by approximate radiance, sample a direction to a
+    // point on its area (spherical cap), evaluate the diffuse BRDF, and attenuate
+    // by a shadow ray (GP medium transmittance + hard-surface occlusion).
+    MPHD RGB_F32 nextEventEstimate(const vec3f& p, const vec3f& n, const SceneDevice& scene,
+                                   const Medium& m, const GPConditioningState& c, u32 seed,
+                                   bool inMedium, Random& rng) {
+      if (scene.numLights == 0) return {0.0f, 0.0f, 0.0f};
+
+      f32 pickWeight;
+      const i32 li = chooseLight(scene.lights, scene.numLights, p, rng, pickWeight);
+      if (li < 0) return {0.0f, 0.0f, 0.0f};
+
+      LightSample ls;
+      if (!sampleLightDirect(p, scene.lights[li], rng, ls)) return {0.0f, 0.0f, 0.0f};
+
+      const f32 cosTheta = mps::dot(ls.d, n);
+      if (cosTheta <= 0.0f) return {0.0f, 0.0f, 0.0f};
+
+      const RGB_F32 f = lambertianAlbedo() * cosTheta;   // diffuse shading (albedo·cosθ)
+
+      // Shadow ray: GP medium transmittance, then hard-surface occlusion up to
+      // just short of the sampled light point.
+      Ray shadowRay;
+      shadowRay.o   = p + n * EPS_SURFACE;
+      shadowRay.dir = ls.d;
+      shadowRay.min = EPS_NEAR;
+      shadowRay.max = ls.dist * 0.99f;
+
+      RGB_F32 trans{1.0f, 1.0f, 1.0f};
+      if (inMedium) {
+        trans = transmittance(shadowRay, m, c, seed);
+        if (trans.r <= 0.0f && trans.g <= 0.0f && trans.b <= 0.0f) return {0.0f, 0.0f, 0.0f};
+      }
+      if (sceneOccluded(shadowRay, scene, u32(li))) return {0.0f, 0.0f, 0.0f};
+
+      return f * ls.radiance * trans * pickWeight;
+    }
+
+  } // namespace
 
   MPHD RGB_F32 trace(const Ray& ray0, const RenderContext& ctx, u32 seed) {
     Ray ray = ray0;
@@ -11,14 +55,12 @@ namespace mps::core {
     RGB_F32 throughput{1.0f, 1.0f, 1.0f};
     GPConditioningState cond;
 
-    // Simple direct illumination: a fixed sun + ambient (no NEE in this milestone).
-    const vec3f sunDir = mps::normalize(vec3f{0.3f, 1.0f, 0.2f});
-    const RGB_F32 sun{1.4f, 1.3f, 1.1f};
-    const RGB_F32 ambient{0.06f, 0.06f, 0.08f};
+    const RGB_F32 ambient{0.03f, 0.03f, 0.04f};
 
     Random rng(seed);
-    bool inMedium = false;   // a path starts in free space; it enters a medium only
-                             // after crossing a wrapped (Null, mediumId) boundary
+    bool inMedium = false;     // a path starts in free space; it enters a medium only
+                               // after crossing a wrapped (Null, mediumId) boundary
+    bool wasSpecular = true;   // camera ray counts as specular: direct light hits emit
 
     for (i32 bounce = 0; bounce < ctx.settings.maxBounce; ++bounce) {
 
@@ -26,15 +68,17 @@ namespace mps::core {
       if (inMedium) {
         MediumSample ms;
         if (sampleDistance(ray, ctx.medium, cond, seed, ms)) {
-          // Hit the implicit surface; shade with the gradient as the normal.
-          RGB_F32 albedo = lambertianAlbedo();
-          f32 ndl = mps::fabsf(mps::dot(ms.normal, sunDir));
-          emission += throughput * albedo * (ambient + sun * ndl);
+          // Hit the GP implicit surface; shade with the gradient as the normal.
+          const RGB_F32 albedo = lambertianAlbedo();
+          emission += throughput * (ambient * albedo +
+                                    nextEventEstimate(ms.p, ms.normal, ctx.scene, ctx.medium,
+                                                      cond, seed, true, rng));
 
           // Scatter (Lambertian), then pin the surface for the next bounce.
           BsdfSample bs = bsdfSample(BsdfType::Lambertian, -ray.dir, ms.normal, {0.0f, 0.0f},
                                      rng.next1D(), rng.next1D());
           throughput = throughput * bs.weight;
+          wasSpecular = false;
 
           cond = sampleCondition(ms, ctx.medium, seed, ray.dir);
 
@@ -69,12 +113,22 @@ namespace mps::core {
         continue;
       }
 
-      // Shade opaque surfaces only (Null = transparent).
-      if (bt != BsdfType::Null) {
-        RGB_F32 albedo = lambertianAlbedo();
-        f32 ndl = mps::fabsf(mps::dot(hr.ng, sunDir));
-        emission += throughput * albedo * (ambient + sun * ndl);
+      if (bt == BsdfType::Null) {
+        // Transparent boundary: no shading, specularness unchanged.
+      } else {
+        // Opaque surface.
+        const RGB_F32 albedo = lambertianAlbedo();
+        if (hr.lightId != NO_LIGHT && wasSpecular) {
+          // Directly viewing a light through a specular path: emit it (NEE at the
+          // previous vertex already counted it for diffuse bounces).
+          emission += throughput * ctx.scene.lights[hr.lightId].emission;
+        } else {
+          emission += throughput * (ambient * albedo +
+                                    nextEventEstimate(hr.p, hr.ng, ctx.scene, ctx.medium,
+                                                      cond, seed, false, rng));
+        }
         throughput = throughput * bs.weight;
+        wasSpecular = false;
       }
 
       ray.o = hr.p + hr.ng * ctx.settings.eps;  // step outside

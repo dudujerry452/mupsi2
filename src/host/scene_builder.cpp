@@ -43,6 +43,10 @@ namespace mps::host {
     cfg.host.addSphere({120.0f, 60.0f, -280.0f}, 60.0f,
                        u16(core::BsdfType::Lambertian), core::NO_MEDIUM, core::NO_LIGHT);
 
+    // ——— area lights (sampled by NEE) ———
+    cfg.host.addLight({-250.0f, 350.0f, -350.0f}, 70.0f, {40.0f, 36.0f, 30.0f});  // key
+    cfg.host.addLight({ 300.0f,  80.0f, -200.0f}, 45.0f, {15.0f, 12.0f, 10.0f});  // fill
+
     // ——— camera ———
     cfg.camera = core::makeCamera({0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f},
                                   45.0f, w, h);
@@ -128,6 +132,10 @@ namespace mps::host {
 
     // ——— wrapper sphere (transparent, holds the medium) ———
     cfg.host.addSphere(pos, m.boundRadius, u16(core::BsdfType::Null), 0, core::NO_LIGHT);
+
+    // ——— area lights (sampled by NEE) ———
+    cfg.host.addLight({-300.0f, 350.0f, -350.0f}, 70.0f, {40.0f, 36.0f, 30.0f});  // key
+    cfg.host.addLight({ 300.0f, 100.0f, -150.0f}, 45.0f, {15.0f, 12.0f, 10.0f});  // fill
 
     // ——— camera: straight ahead ———
     cfg.camera = core::makeCamera({0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f},

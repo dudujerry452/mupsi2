@@ -35,6 +35,9 @@ namespace mps::host {
     dev.voxelRes       = host.voxelRes;
     dev.voxelBandCount = u32(host.voxelBandIndex.size());
 
+    dev.lights    = copyArray(host.lights);
+    dev.numLights = u32(host.lights.size());
+
     dev.numVertices      = u32(host.vertices.size());
     dev.numFaces         = u32(host.faces.size());
     dev.numBvhNodes      = u32(host.bvhNodes.size());
@@ -54,6 +57,7 @@ namespace mps::host {
     delete[] dev.voxelSignGrid;
     delete[] dev.voxelBandIndex;
     delete[] dev.voxelBandValue;
+    delete[] dev.lights;
     dev = core::SceneDevice{};
   }
 

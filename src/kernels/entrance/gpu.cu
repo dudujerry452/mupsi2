@@ -57,6 +57,7 @@ namespace mps::kernels {
     u8*           d_voxelSignGrid  = upload(h.voxelSignGrid, h.voxelRes * h.voxelRes * h.voxelRes);
     u32*          d_voxelBandIndex = upload(h.voxelBandIndex, h.voxelBandCount);
     f32*          d_voxelBandValue = upload(h.voxelBandValue, h.voxelBandCount);
+    core::AreaLight* d_lights      = upload(h.lights, h.numLights);
 
     core::SceneDevice d_scene;
     d_scene.numSpheres = h.numSpheres;
@@ -73,6 +74,8 @@ namespace mps::kernels {
     d_scene.voxelBandValue = d_voxelBandValue;
     d_scene.voxelRes       = h.voxelRes;
     d_scene.voxelBandCount = h.voxelBandCount;
+    d_scene.lights    = d_lights;
+    d_scene.numLights = h.numLights;
     d_scene.numVertices      = h.numVertices;
     d_scene.numFaces         = h.numFaces;
     d_scene.numBvhNodes      = h.numBvhNodes;
@@ -120,6 +123,7 @@ namespace mps::kernels {
     cudaFree(d_voxelSignGrid);
     cudaFree(d_voxelBandIndex);
     cudaFree(d_voxelBandValue);
+    cudaFree(d_lights);
 
     mplogtag("cuda", "render {}x{} spp={} done", w, hh, spp);
   }

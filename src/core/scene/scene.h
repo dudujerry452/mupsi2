@@ -6,6 +6,7 @@
 #include "core/primitive/primitive.h"
 #include "core/bvh/bvh.h"
 #include "core/tracer/intersect.h"
+#include "core/light/light.h"
 
 namespace mps::core {
 
@@ -28,6 +29,10 @@ namespace mps::core {
     f32*      voxelBandValue = nullptr;  // in-band signed distances
     u32 voxelRes       = 0;
     u32 voxelBandCount = 0;
+
+    // Emissive area lights (sampled by NEE; also present as sphere primitives).
+    u32        numLights = 0;
+    AreaLight* lights    = nullptr;
 
     // Element counts of the shared arrays above (needed for backend upload).
     u32 numVertices      = 0;
@@ -53,7 +58,11 @@ namespace mps::core {
     std::vector<f32> voxelBandValue;
     u32 voxelRes = 0;
 
+    // Emissive area lights.
+    std::vector<AreaLight> lights;
+
     void addSphere(const vec3f& center, f32 radius, u16 bsdfId, u16 mediumId, u16 lightId);
+    void addLight(const vec3f& center, f32 radius, const RGB_F32& emission);
     // vertices/faces must be world-space.
     void addMesh(const vec3f* verts, u32 nv, const u32* tris, u32 nt, u16 bsdfId, u16 mediumId, u16 lightId);
 
@@ -64,6 +73,6 @@ namespace mps::core {
   };
 
   MPHD HitRecord sceneIntersect(const Ray& ray, const SceneDevice& s);
-  MPHD bool      sceneOccluded(const Ray& ray, const SceneDevice& s);
+  MPHD bool      sceneOccluded(const Ray& ray, const SceneDevice& s, u32 excludeLightId = NO_LIGHT);
 
 }

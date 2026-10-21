@@ -1,9 +1,10 @@
 #include "core/scene/scene.h"
 
+#include "core/bsdf/bsdf.h"
+
 namespace mps::core {
 
-  void SceneHost::addSphere(const vec3f& center, f32 radius, u16 bsdfId, u16 mediumId, u16 lightId) {
-    Sphere s;
+  void SceneHost::addSphere(const vec3f& center, f32 radius, u16 bsdfId, u16 mediumId, u16 lightId) {    Sphere s;
     s.info.type = PrimitiveType::Sphere;
     s.info.bsdfId = bsdfId;
     s.info.texId = 0;
@@ -15,6 +16,13 @@ namespace mps::core {
     s.info.bounds = AABB(center - vec3f{radius, radius, radius},
                          center + vec3f{radius, radius, radius});
     spheres.push_back(s);
+  }
+
+  void SceneHost::addLight(const vec3f& center, f32 radius, const RGB_F32& emission) {
+    const u16 lightId = u16(lights.size());
+    lights.push_back({center, radius, emission});
+    // The light is also a visible/blocking Lambertian sphere primitive.
+    addSphere(center, radius, u16(BsdfType::Lambertian), NO_MEDIUM, lightId);
   }
 
   namespace {
@@ -132,13 +140,18 @@ namespace mps::core {
     return best;
   }
 
-  MPHD bool sceneOccluded(const Ray& ray, const SceneDevice& s) {
+  MPHD bool sceneOccluded(const Ray& ray, const SceneDevice& s, u32 excludeLightId) {
     for (u32 i = 0; i < s.numSpheres; ++i) {
-      if (Intersect<PrimitiveType::Sphere>::run(ray, s.spheres[i]).hit) return true;
+      const Sphere& sp = s.spheres[i];
+      if (excludeLightId != NO_LIGHT && sp.info.lightId == excludeLightId) continue; // the light we target
+      if (sp.info.bsdfId == u16(BsdfType::Null)) continue;                            // transparent wrapper
+      if (Intersect<PrimitiveType::Sphere>::run(ray, sp).hit) return true;
     }
     MeshGeometry g{s.vertices, s.faces, s.bvhNodes, s.bvhTriIndices};
     for (u32 i = 0; i < s.numMeshes; ++i) {
       const Mesh& m = s.meshes[i];
+      if (excludeLightId != NO_LIGHT && m.info.lightId == excludeLightId) continue;
+      if (m.info.bsdfId == u16(BsdfType::Null)) continue;
       if (occludedBVH(ray, g.bvhNodes + m.bvhNodeOffset, g.bvhTriIndices + m.bvhTriOffset,
                       g.vertices, g.faces, m.bvhRoot)) return true;
     }
