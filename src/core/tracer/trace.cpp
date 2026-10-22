@@ -269,6 +269,7 @@ namespace mps::core {
           continue;
         } else {
           inMedium = false;   // exited the medium; fall through to hard surfaces
+          ray.max = 1e30f;    // un-clamp so surfaces beyond the wrapper (floor/walls) are found
         }
       }
 
