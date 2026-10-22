@@ -176,7 +176,7 @@ namespace mps::host {
     m.type         = core::MediumType::GP;
     m.meanType     = core::MeanType::Mesh;
     m.boundCenter  = pos;
-    m.boundRadius  = targetRadius * 1.4f;
+    m.boundRadius  = targetRadius * 1.05f;   // tight bound: bbox sphere (targetRadius) + a few σ of GP noise
     m.sceneScale   = targetRadius;
     m.sigma        = sigma;
     m.lengthScale  = {1.0f, 1.0f, 1.0f};

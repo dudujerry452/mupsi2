@@ -49,7 +49,8 @@ int main(int argc, char** argv) {
   // ——— CLI parsing (positional for brevity, or --name value) ———
   std::string scene = "spot", modeArg, bsdfArg, colorArg, heatArg, outputArg = "test.ppm";
   i32 w = 256, h = 256, sppArg = 0;
-  f32 sigmaArg = 0.0f;
+  f32 sigmaArg = 0.0f, yawArg = 0.0f, pitchArg = 0.0f;
+  bool noMedia = false, noEnv = false;
 
   auto need = [&](i32& i, const char* name) -> std::string {
     if (i + 1 >= argc) { std::cerr << "missing value for " << name << "\n"; std::exit(1); }
@@ -71,6 +72,10 @@ int main(int argc, char** argv) {
       else if (a == "--color")   colorArg = need(i, "--color");
       else if (a == "--heat")    heatArg = need(i, "--heat");
       else if (a == "--output")  outputArg = need(i, "--output");
+      else if (a == "--yaw")     yawArg = std::atof(need(i, "--yaw").c_str());
+      else if (a == "--pitch")   pitchArg = std::atof(need(i, "--pitch").c_str());
+      else if (a == "--nomedia") noMedia = true;
+      else if (a == "--noenv")   noEnv = true;
       else { std::cerr << "unknown option '" << a << "'\n"; printUsage(); return 1; }
     }
   } else {
@@ -103,6 +108,17 @@ int main(int argc, char** argv) {
     std::cerr << "unknown scene '" << scene << "' (use sphere|spot|bunny|dragon|dragonns)\n";
     return 1;
   }
+
+  // Rotate the camera view (degrees) around the fixed position for multi-angle shots.
+  if (yawArg != 0.0f || pitchArg != 0.0f) {
+    const f32 yaw   = yawArg   * mps::pi / 180.0f;
+    const f32 pitch = pitchArg * mps::pi / 180.0f;
+    const vec3f dir{mps::sinf(yaw) * mps::cosf(pitch), mps::sinf(pitch), -mps::cosf(yaw) * mps::cosf(pitch)};
+    cfg.camera = mps::core::makeCamera(cfg.camera.pos, mps::normalize(dir), {0.0f, 1.0f, 0.0f}, 45.0f, w, h);
+  }
+
+  // Debug: disable the GP medium (render hard surfaces only).
+  if (noMedia) cfg.hasMedium = false;
 
   // Override the GP memory model (for the 7.1 test matrix).
   if (modeArg == "single")       cfg.medium.gpMode = core::GPMode::SingleRealization;
@@ -173,7 +189,7 @@ int main(int argc, char** argv) {
   mps::RGB_F32* envPixels = nullptr;
   {
     mps::host::HdrImage env = mps::host::loadHdr("/home/dudujerry/models/envmap.hdr");
-    if (env.width > 0 && env.height > 0) {
+    if (!noEnv && env.width > 0 && env.height > 0) {
       // Scale the HDR down so indirect/envmap reflections don't blow out the
       // render (the raw sky is ~1-10+ radiance).
       constexpr f32 ENVMAP_SCALE = 0.15f;
