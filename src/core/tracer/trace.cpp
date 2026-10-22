@@ -189,11 +189,13 @@ namespace mps::core {
                                // after crossing a wrapped (Null, mediumId) boundary
     bool wasSpecular = true;   // camera ray counts as specular: direct light hits emit
 
-    for (i32 bounce = 0; bounce < ctx.settings.maxBounce; ++bounce) {
+    i32 bounce = 0;
+    while (bounce < ctx.settings.maxBounce) {
       // Per-bounce medium seed: SingleRealization keeps ONE fixed realization for
       // the whole image (a constant global seed, independent of pixel/spp);
-      // Renewal/Renewal+ give each ray segment a fresh, independent realization
-      // (matches the original mupsi's make_seed(pixel, spp, seed, bounce)).
+      // Renewal/Renewal+ give each ray segment a fresh, independent realization.
+      // `bounce` counts SURFACE scatter events only — crossing the medium bound
+      // (AABB entry/march/exit) is a traversal and does NOT consume a bounce.
       const u32 mSeed = (ctx.medium.gpMode == GPMode::SingleRealization)
                         ? 42u : make_seed(seed, u32(bounce));
 
@@ -267,6 +269,7 @@ namespace mps::core {
           f32 survival = mps::minf(1.0f, mps::maxf(throughput.r, mps::maxf(throughput.g, throughput.b)));
           if (bounce > 2 && rng.next1D() > survival) break;
           if (survival > 0.0f) throughput = throughput / survival;
+          ++bounce;   // a GP-surface scatter counts as one bounce
           continue;
         } else {
           // Exited the medium without hitting the GP surface. Advance the ray
@@ -348,6 +351,7 @@ namespace mps::core {
       f32 survival = mps::minf(1.0f, mps::maxf(throughput.r, mps::maxf(throughput.g, throughput.b)));
       if (bounce > 2 && rng.next1D() > survival) break;
       if (survival > 0.0f) throughput = throughput / survival;
+      ++bounce;   // a hard-surface scatter counts as one bounce
     }
 
     return emission;
