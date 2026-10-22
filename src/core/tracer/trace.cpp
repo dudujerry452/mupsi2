@@ -19,8 +19,8 @@ namespace mps::core {
       const vec3f mx = m.colorGrid.origin +
                        vec3f{f32(m.colorGrid.res), f32(m.colorGrid.res), f32(m.colorGrid.res)} *
                        m.colorGrid.cellSize;
-      if (cm == ColorMethod::Surface) return kernelColor(p, mn, mx);
-      if (cm == ColorMethod::Kernel) return kernelColor(p, mn, mx);
+      if (cm == ColorMethod::Surface) return fieldColor(p, mn, mx);   // approach 2: analytic surface color
+      if (cm == ColorMethod::Kernel) return kernelColor(p, mn, mx);   // approach 3: spatial color kernel
       return lambertianAlbedo();
     }
 

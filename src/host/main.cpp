@@ -22,23 +22,72 @@ constexpr Backend ACTIVE_BACKEND = Backend::CUDA;
 constexpr Backend ACTIVE_BACKEND = Backend::CPU;
 #endif
 
+static void printUsage() {
+  std::cout <<
+    "mupsi2 — GPIS renderer\n"
+    "\n"
+    "Usage:\n"
+    "  mupsi <scene> [w] [h] [mode] [bsdf] [spp] [sigma] [color] [heat] [--output FILE]\n"
+    "  mupsi --scene <s> --width <w> --height <h> [--mode m] [--bsdf b] [--spp n]\n"
+    "         [--sigma f] [--color c] [--heat FILE] [--output FILE]\n"
+    "\n"
+    "Options:\n"
+    "  scene     sphere | spot | bunny | dragon | dragonns   (default spot)\n"
+    "  mode      single | renewal   (GP memory model override)\n"
+    "  bsdf      lambertian | specular   (GP surface BSDF override)\n"
+    "  spp       samples per pixel (default 1)\n"
+    "  sigma     GP noise amplitude override\n"
+    "  color     constant | voxel | surface | kernel | heatkernel   (texturing)\n"
+    "  heat      path to a precomputed HKTEx .bin (tools/precompute_heat.py)\n"
+    "  output    output PPM path (default test.ppm)\n"
+    "  -h/--help show this help\n";
+}
+
 int main(int argc, char** argv) {
   mplog("mupsi2 renderer starting");
 
-  // CLI: mupsi [scene] [width] [height] [single|renewal] [lambertian|specular] [spp]
-  //   scene ∈ {sphere, spot, bunny, dragon}  (default: spot)
-  //   [single|renewal] overrides the scene's default GPMode.
-  //   [lambertian|specular] overrides the GP surface BSDF.
-  //   [spp] overrides samples per pixel.
-  const std::string scene = (argc > 1) ? argv[1] : "spot";
-  const i32 w = (argc > 2) ? std::atoi(argv[2]) : 256;
-  const i32 h = (argc > 3) ? std::atoi(argv[3]) : w;
-  const std::string modeArg = (argc > 4) ? argv[4] : "";
-  const std::string bsdfArg = (argc > 5) ? argv[5] : "";
-  const i32 sppArg = (argc > 6) ? std::atoi(argv[6]) : 0;
-  const f32 sigmaArg = (argc > 7) ? std::atof(argv[7]) : 0.0f;
-  const std::string colorArg = (argc > 8) ? argv[8] : "";
-  const std::string heatArg = (argc > 9) ? argv[9] : "";
+  // ——— CLI parsing (positional for brevity, or --name value) ———
+  std::string scene = "spot", modeArg, bsdfArg, colorArg, heatArg, outputArg = "test.ppm";
+  i32 w = 256, h = 256, sppArg = 0;
+  f32 sigmaArg = 0.0f;
+
+  auto need = [&](i32& i, const char* name) -> std::string {
+    if (i + 1 >= argc) { std::cerr << "missing value for " << name << "\n"; std::exit(1); }
+    return argv[++i];
+  };
+
+  bool named = (argc > 1) && (argv[1][0] == '-');
+  if (named) {
+    for (i32 i = 1; i < argc; ++i) {
+      const std::string a = argv[i];
+      if (a == "-h" || a == "--help") { printUsage(); return 0; }
+      else if (a == "--scene")   scene = need(i, "--scene");
+      else if (a == "--width")   w = std::atoi(need(i, "--width").c_str());
+      else if (a == "--height")  h = std::atoi(need(i, "--height").c_str());
+      else if (a == "--mode")    modeArg = need(i, "--mode");
+      else if (a == "--bsdf")    bsdfArg = need(i, "--bsdf");
+      else if (a == "--spp")     sppArg = std::atoi(need(i, "--spp").c_str());
+      else if (a == "--sigma")   sigmaArg = std::atof(need(i, "--sigma").c_str());
+      else if (a == "--color")   colorArg = need(i, "--color");
+      else if (a == "--heat")    heatArg = need(i, "--heat");
+      else if (a == "--output")  outputArg = need(i, "--output");
+      else { std::cerr << "unknown option '" << a << "'\n"; printUsage(); return 1; }
+    }
+  } else {
+    if (argc > 1 && (std::string(argv[1]) == "-h" || std::string(argv[1]) == "--help")) {
+      printUsage(); return 0;
+    }
+    scene    = (argc > 1) ? argv[1] : "spot";
+    w        = (argc > 2) ? std::atoi(argv[2]) : 256;
+    h        = (argc > 3) ? std::atoi(argv[3]) : w;
+    modeArg  = (argc > 4) ? argv[4] : "";
+    bsdfArg  = (argc > 5) ? argv[5] : "";
+    sppArg   = (argc > 6) ? std::atoi(argv[6]) : 0;
+    sigmaArg = (argc > 7) ? std::atof(argv[7]) : 0.0f;
+    colorArg = (argc > 8) ? argv[8] : "";
+    heatArg  = (argc > 9) ? argv[9] : "";
+    // extra args are ignored for positional brevity (use --output for the path)
+  }
 
   // 1. host staging
   mps::host::SceneConfig cfg;
@@ -155,7 +204,7 @@ int main(int argc, char** argv) {
   out.pixels = new mps::RGB_8Bit[W * H];
   for (i32 i = 0; i < W * H; ++i) fb.pixels[i] = fb.pixels[i] * invSpp;
   mps::host::framebuffer_radiance_to_8bit(fb, out);
-  mps::host::save_ppm("test.ppm", out);
+  mps::host::save_ppm(outputArg, out);
 
   delete[] fb.pixels;
   delete[] out.pixels;
