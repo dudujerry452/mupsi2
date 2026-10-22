@@ -12,6 +12,25 @@ namespace mps::host {
 
   namespace {
 
+    // Add a quad (2 triangles) with the given BSDF as a hard surface.
+    void addQuad(core::SceneHost& h, const vec3f& a, const vec3f& b, const vec3f& c, const vec3f& d,
+                 u16 bsdfId) {
+      const vec3f verts[4] = {a, b, c, d};
+      const u32 tris[6] = {0, 1, 2, 0, 2, 3};
+      h.addMesh(verts, 4, tris, 2, bsdfId, core::NO_MEDIUM, core::NO_LIGHT);
+    }
+
+    // Floor + back wall, placed below/behind the GP wrapper sphere so they stay
+    // outside the GP medium.
+    void addFloorWalls(SceneConfig& cfg, f32 floorY, f32 backZ, f32 extent) {
+      addQuad(cfg.host, {-extent, floorY, -200.0f}, {extent, floorY, -200.0f},
+              {extent, floorY, backZ}, {-extent, floorY, backZ},
+              u16(core::BsdfType::Lambertian));
+      addQuad(cfg.host, {-extent, floorY, backZ}, {extent, floorY, backZ},
+              {extent, floorY + extent, backZ}, {-extent, floorY + extent, backZ},
+              u16(core::BsdfType::Lambertian));
+    }
+
     // Procedural non-stationary kernel field for Eq. 25 testing: length scale L
     // ramps linearly with height (fine at the bottom, coarse at the top); σ is
     // constant. Written into cfg.host.kernel* and cfg.medium.kernelField.
@@ -45,8 +64,7 @@ namespace mps::host {
     }
 
     // Bake the analytic 3D color field into a dense RGB voxel grid (approach 1).
-    void buildColorGrid(SceneConfig& cfg, const core::AABB& bounds, u32 res) {
-      const vec3f diag = bounds.diagonal();
+    void buildColorGrid(SceneConfig& cfg, const core::AABB& bounds, u32 res) {      const vec3f diag = bounds.diagonal();
       const f32 maxExtent = mps::maxf(diag.x, mps::maxf(diag.y, diag.z));
       const f32 cellSize = (res > 0) ? maxExtent / f32(res) : 1.0f;
 
@@ -108,6 +126,9 @@ namespace mps::host {
     // ——— area lights (sampled by NEE) ———
     cfg.host.addLight({-250.0f, 350.0f, -350.0f}, 70.0f, {26.0f, 23.0f, 19.0f});  // key
     cfg.host.addLight({ 300.0f,  80.0f, -200.0f}, 45.0f, {10.0f, 8.0f, 7.0f});   // fill
+
+    // ——— floor + back wall ———
+    addFloorWalls(cfg, -300.0f, -850.0f, 500.0f);
 
     // ——— camera ———
     cfg.camera = core::makeCamera({0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f},
@@ -213,6 +234,9 @@ namespace mps::host {
     // ——— area lights (sampled by NEE) ———
     cfg.host.addLight({-300.0f, 350.0f, -350.0f}, 70.0f, {26.0f, 23.0f, 19.0f});  // key
     cfg.host.addLight({ 300.0f, 100.0f, -150.0f}, 45.0f, {10.0f, 8.0f, 7.0f});   // fill
+
+    // ——— floor + back wall ———
+    addFloorWalls(cfg, -300.0f, -850.0f, 500.0f);
 
     // ——— camera: straight ahead ———
     cfg.camera = core::makeCamera({0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f},

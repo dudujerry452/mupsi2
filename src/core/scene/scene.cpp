@@ -103,7 +103,7 @@ namespace mps::core {
 
       h.bvhNodes.insert(h.bvhNodes.end(), bvh.nodes.begin(), bvh.nodes.end());
       for (u32 ti : bvh.triIndices)
-        h.bvhTriIndices.push_back(m.faceOffset + ti);  // global face indices
+        h.bvhTriIndices.push_back(m.faceOffset / 3 + ti);  // global face index (triangle units)
 
       return m;
     }
