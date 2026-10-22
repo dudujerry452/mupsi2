@@ -100,8 +100,6 @@ namespace mps::host {
     m.meanType     = core::MeanType::Sphere;
     m.meanCenter   = {0.0f, 0.0f, -500.0f};
     m.meanRadius   = 150.0f;
-    m.boundCenter  = {0.0f, 0.0f, -500.0f};
-    m.boundRadius  = 170.0f;                 // wrapper, ≥ mean + a few σ
     m.sceneScale   = 150.0f;                 // ≈ object radius
     m.sigma        = 5.0f;
     m.lengthScale  = {1.0f, 1.0f, 1.0f};
@@ -110,10 +108,18 @@ namespace mps::host {
     m.gpMode       = core::GPMode::RenewalPlus;
     cfg.hasMedium  = true;
 
+    // AABB medium bound: mean sphere + a few σ of GP noise; bottom face on the
+    // floor so the medium never crosses it.
+    {
+      const f32 half = m.meanRadius + 3.0f * m.sigma;
+      m.boundMin = m.meanCenter - vec3f{half, half, half};
+      m.boundMax = m.meanCenter + vec3f{half, half, half};
+      m.boundMin.y = -300.0f;   // floor
+    }
+
     // ——— primitives ———
-    // Wrapping sphere: transparent (Null), contains the GP medium (medium id 0).
-    cfg.host.addSphere({0.0f, 0.0f, -500.0f}, 170.0f,
-                       u16(core::BsdfType::Null), 0, core::NO_LIGHT);
+    // (the medium bound is tested directly in trace.cpp via the AABB; no
+    // wrapper primitive is needed or added)
 
     // Solid Lambertian sphere for contrast (no medium).
     cfg.host.addSphere({120.0f, 60.0f, -280.0f}, 60.0f,
@@ -167,6 +173,17 @@ namespace mps::host {
     for (size_t i = 0; i < obj.vertices.size(); ++i)
       worldVerts[i] = (obj.vertices[i] - center) * scale + pos;
 
+    // Sit the mesh on the floor: translate it down so its lowest vertex is at
+    // the floor plane (the auto-fit centers it, which leaves an oblong mesh
+    // floating above the floor).
+    const f32 floorY = -150.0f;
+    {
+      core::AABB wb = core::AABB::empty();
+      for (const vec3f& v : worldVerts) wb.extend(v);
+      const f32 drop = wb.min.y - floorY;
+      for (vec3f& v : worldVerts) v.y -= drop;
+    }
+
     const u32 nt = u32(obj.faces.size() / 3);
     cfg.host.addMeshMean(worldVerts.data(), u32(worldVerts.size()), obj.faces.data(), nt);
     mplog("buildMeshGpScene: {} verts {} tris (scale {:.3f})", worldVerts.size(), nt, scale);
@@ -175,8 +192,6 @@ namespace mps::host {
     core::Medium& m = cfg.medium;
     m.type         = core::MediumType::GP;
     m.meanType     = core::MeanType::Mesh;
-    m.boundCenter  = pos;
-    m.boundRadius  = targetRadius * 1.05f;   // tight bound: bbox sphere (targetRadius) + a few σ of GP noise
     m.sceneScale   = targetRadius;
     m.sigma        = sigma;
     m.lengthScale  = {1.0f, 1.0f, 1.0f};
@@ -184,6 +199,21 @@ namespace mps::host {
     m.impulseDensity = 3;
     m.gpMode       = mode;
     cfg.hasMedium  = true;
+
+    // AABB medium bound: mesh bbox + a few σ of GP noise, with the bottom face
+    // exactly on the floor (so the medium never crosses the floor plane — no
+    // circular shadow gap, unlike a bounding sphere).
+    {
+      core::AABB wb = core::AABB::empty();
+      for (const vec3f& v : worldVerts) wb.extend(v);
+      const f32 margin = 3.0f * sigma;
+      m.boundMin = wb.min - vec3f{margin, margin, margin};
+      m.boundMax = wb.max + vec3f{margin, margin, margin};
+      // Keep the AABB's bottom a hair ABOVE the floor so the floor plane is
+      // OUTSIDE the medium bound: a ray marching downward then exits the box
+      // first and still hits the floor (instead of skipping past it).
+      m.boundMin.y = floorY + 0.5f;
+    }
 
     if (useVoxel) {
       // World-space AABB of the auto-fitted mesh.
@@ -228,10 +258,9 @@ namespace mps::host {
       buildColorGrid(cfg, worldBox3, 64);
     }
 
-    // ——— wrapper sphere ———
-    // Removed: the medium bound (boundCenter/boundRadius) is now tested directly
-    // in trace.cpp via sphereEnterT(), so no Null wrapper primitive is needed (and
-    // it can never be accidentally shaded as an opaque sphere).
+    // ——— medium bound ———
+    // The medium bound AABB is tested directly in trace.cpp (aabbIntersect), so
+    // no wrapper primitive is needed (and none can be accidentally shaded).
 
     // ——— area lights (sampled by NEE) ———
     cfg.host.addLight({-300.0f, 350.0f, -350.0f}, 70.0f, {5.0f, 4.0f, 3.5f});   // key

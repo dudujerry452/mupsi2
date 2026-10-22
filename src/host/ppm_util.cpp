@@ -6,7 +6,10 @@ namespace mps::host {
 
   MPHD void framebuffer_radiance_to_8bit(const FrameBuffer<RGB_F32>& fb, FrameBuffer<RGB_8Bit>& ret) {
     for (i32 i = 0; i < fb.width * fb.height; ++i) {
-      ret.pixels[i] = radiance_to_8bit(fb.pixels[i]);
+      // Deterministic per-pixel triangular dither in [-0.5, 0.5] LSB.
+      const u32 h = u32(i) * 2654435761u ^ (u32(i) >> 13);
+      const f32 dither = (f32(h & 0xFFFFu) / 65535.0f) - 0.5f;
+      ret.pixels[i] = radiance_to_8bit(fb.pixels[i], dither);
     }
   }
 

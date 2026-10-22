@@ -63,10 +63,12 @@ namespace mps::core {
     // Isotropic heat-kernel texture (HKTEx) for ColorMethod::HeatKernel.
     HeatKernel heatKernel;
 
-    // Bounding (wrapper) sphere: the medium only lives inside it, so ray
-    // marching is clamped to the far intersection with this sphere.
-    vec3f boundCenter{0.0f, 0.0f, 0.0f};
-    f32   boundRadius = 1.0f;
+    // Bounding (wrapper) AABB: the medium only lives inside it, so ray marching
+    // is clamped to the far intersection with this box. The bottom face is placed
+    // on the floor so the medium never crosses the floor plane (no circular gap
+    // in the floor shadow, unlike a bounding sphere).
+    vec3f boundMin{0.0f, 0.0f, 0.0f};
+    vec3f boundMax{0.0f, 0.0f, 0.0f};
 
     // Characteristic scene length (≈ object radius). Scale-aware marching
     // constants in constant.h are multiplied by this at the use site.
@@ -85,28 +87,31 @@ namespace mps::core {
     u16 surfaceBsdf = 1;   // = BsdfType::Lambertian
   };
 
-  // Far intersection of a ray with a sphere; ray.max if it misses.
-  // Used to clamp the march to the wrapper (bounding) sphere.
-  MPHD MPINL f32 sphereExitT(const Ray& ray, const vec3f& C, f32 R) {
-    vec3f V = ray.o - C;
-    f32 k = mps::dot(ray.dir, V);
-    f32 disc = k * k - (mps::dot(V, V) - R * R);
-    if (disc < 0.0f) return ray.max;
-    f32 s = mps::sqrtf(disc);
-    f32 t2 = -k + s;   // far root
-    return t2 > ray.min ? t2 : ray.max;
-  }
-
-  // Near intersection of a ray with a sphere (the entry point), or -1 if the
-  // ray starts outside and does not enter before ray.max.
-  MPHD MPINL f32 sphereEnterT(const Ray& ray, const vec3f& C, f32 R) {
-    vec3f V = ray.o - C;
-    f32 k = mps::dot(ray.dir, V);
-    f32 disc = k * k - (mps::dot(V, V) - R * R);
-    if (disc < 0.0f) return -1.0f;
-    f32 s = mps::sqrtf(disc);
-    f32 t1 = -k - s;   // near root
-    return (t1 >= ray.min && t1 <= ray.max) ? t1 : -1.0f;
+  // Ray/AABB slab test. Returns true on a hit and fills tEnter/tExit with the
+  // clipped entry/exit distances (tEnter == ray.min when the ray starts inside).
+  MPHD MPINL bool aabbIntersect(const Ray& ray, const vec3f& mn, const vec3f& mx,
+                                f32& tEnter, f32& tExit) {
+    f32 tmin = ray.min, tmax = ray.max;
+    for (i32 axis = 0; axis < 3; ++axis) {
+      f32 o, d, lo, hi;
+      if (axis == 0) { o = ray.o.x; d = ray.dir.x; lo = mn.x; hi = mx.x; }
+      else if (axis == 1) { o = ray.o.y; d = ray.dir.y; lo = mn.y; hi = mx.y; }
+      else { o = ray.o.z; d = ray.dir.z; lo = mn.z; hi = mx.z; }
+      if (mps::fabsf(d) > 1e-8f) {
+        f32 inv = 1.0f / d;
+        f32 t1 = (lo - o) * inv;
+        f32 t2 = (hi - o) * inv;
+        if (t1 > t2) { f32 tmp = t1; t1 = t2; t2 = tmp; }
+        tmin = mps::maxf(tmin, t1);
+        tmax = mps::minf(tmax, t2);
+        if (tmin > tmax) return false;
+      } else if (o < lo || o > hi) {
+        return false;
+      }
+    }
+    tEnter = tmin;
+    tExit  = tmax;
+    return true;
   }
 
   // Ray-marching entry points (dispatch on m.type).

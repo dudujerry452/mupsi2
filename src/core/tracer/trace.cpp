@@ -269,24 +269,39 @@ namespace mps::core {
           if (survival > 0.0f) throughput = throughput / survival;
           continue;
         } else {
-          inMedium = false;   // exited the medium; fall through to hard surfaces
-          ray.max = 1e30f;    // un-clamp so surfaces beyond the wrapper (floor/walls) are found
+          // Exited the medium without hitting the GP surface. Advance the ray
+          // past the far side of the bound so the next sceneIntersect starts
+          // OUTSIDE the bound (otherwise it re-enters the medium every bounce
+          // and the ray terminates black).
+          const f32 exitT = ray.max;
+          inMedium = false;
+          ray.o = ray.at(exitT) + ray.dir * ctx.settings.nearEps;
+          ray.min = ctx.settings.nearEps;
+          ray.max = 1e30f;   // un-clamp so surfaces beyond the bound are found
+          cond = GPConditioningState{};  // conditioning is only valid on the GP surface
         }
       }
 
       // ——— ray tracing branch: hard surfaces ———
       HitRecord hr = sceneIntersect(ray, ctx.scene);
 
-      // Enter the wrapped medium when the ray reaches the bounding sphere before
-      // any hard surface (the wrapper is NOT a scene primitive, so it can never
-      // be shaded; the medium bound is tested directly here).
+      // Enter the wrapped medium when the ray reaches the bounding AABB before
+      // any hard surface (the medium bound is tested directly here; there is no
+      // wrapper primitive, so it can never be shaded). A ray that already starts
+      // inside the box (e.g. a bounce off the floor under the bunny) enters
+      // immediately.
       if (!inMedium && ctx.hasMedium) {
-        const f32 tEnter = sphereEnterT(ray, ctx.medium.boundCenter, ctx.medium.boundRadius);
-        if (tEnter >= 0.0f && (!hr.hit || tEnter < hr.t)) {
+        f32 tEnter = ray.min, tExit = ray.max;
+        const bool hitBox = aabbIntersect(ray, ctx.medium.boundMin, ctx.medium.boundMax, tEnter, tExit);
+        if (hitBox && (!hr.hit || tEnter < hr.t)) {
           inMedium = true;
-          ray.o = ray.at(tEnter) + ray.dir * ctx.settings.nearEps;  // step just inside
-          ray.min = ctx.settings.nearEps;
-          ray.max = sphereExitT(ray, ctx.medium.boundCenter, ctx.medium.boundRadius);
+          if (tEnter > ray.min) {
+            ray.o = ray.at(tEnter) + ray.dir * ctx.settings.nearEps;  // step just inside
+            ray.min = ctx.settings.nearEps;
+            ray.max = tExit - tEnter;   // remaining distance inside the AABB (tExit is wrt the ORIGINAL ray.o)
+          } else {
+            ray.max = tExit;            // ray already starts inside the AABB (tExit is wrt ray.o)
+          }
           continue;
         }
       }
@@ -327,6 +342,7 @@ namespace mps::core {
       ray.dir = bs.wi;
       ray.min = ctx.settings.nearEps;
       ray.max = 1e30f;
+      cond = GPConditioningState{};   // left the GP surface: conditioning is stale
 
       // Russian roulette on the path throughput.
       f32 survival = mps::minf(1.0f, mps::maxf(throughput.r, mps::maxf(throughput.g, throughput.b)));
