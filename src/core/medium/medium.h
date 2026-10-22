@@ -97,6 +97,18 @@ namespace mps::core {
     return t2 > ray.min ? t2 : ray.max;
   }
 
+  // Near intersection of a ray with a sphere (the entry point), or -1 if the
+  // ray starts outside and does not enter before ray.max.
+  MPHD MPINL f32 sphereEnterT(const Ray& ray, const vec3f& C, f32 R) {
+    vec3f V = ray.o - C;
+    f32 k = mps::dot(ray.dir, V);
+    f32 disc = k * k - (mps::dot(V, V) - R * R);
+    if (disc < 0.0f) return -1.0f;
+    f32 s = mps::sqrtf(disc);
+    f32 t1 = -k - s;   // near root
+    return (t1 >= ray.min && t1 <= ray.max) ? t1 : -1.0f;
+  }
+
   // Ray-marching entry points (dispatch on m.type).
   // sampleDistance: returns true and fills `out` when the ray crosses the
   // implicit surface inside [ray.min, ray.max]; false if it exits.

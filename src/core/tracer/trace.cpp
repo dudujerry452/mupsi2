@@ -202,10 +202,11 @@ namespace mps::core {
         MediumSample ms;
         if (sampleDistance(ray, ctx.medium, cond, mSeed, ms)) {
           const BsdfType gbt = BsdfType(ctx.medium.surfaceBsdf);
+          RGB_F32 albedo = lambertianAlbedo();
 
           if (gbt == BsdfType::Lambertian) {
             // Diffuse GPIS: NEE + ambient.
-            const RGB_F32 albedo = colorSample(ms.p, ctx.medium);
+            albedo = colorSample(ms.p, ctx.medium);
             emission += throughput * (ambient * albedo +
                                       nextEventEstimate(ms.p, ms.normal, -ray.dir, albedo,
                                                         ctx.scene, ctx.medium, cond, mSeed, true, rng));
@@ -249,7 +250,7 @@ namespace mps::core {
             }
             wasSpecular = true;
           } else {
-            throughput = throughput * bs.weight;
+            throughput = throughput * albedo;
             wasSpecular = false;
           }
 
@@ -275,6 +276,21 @@ namespace mps::core {
 
       // ——— ray tracing branch: hard surfaces ———
       HitRecord hr = sceneIntersect(ray, ctx.scene);
+
+      // Enter the wrapped medium when the ray reaches the bounding sphere before
+      // any hard surface (the wrapper is NOT a scene primitive, so it can never
+      // be shaded; the medium bound is tested directly here).
+      if (!inMedium && ctx.hasMedium) {
+        const f32 tEnter = sphereEnterT(ray, ctx.medium.boundCenter, ctx.medium.boundRadius);
+        if (tEnter >= 0.0f && (!hr.hit || tEnter < hr.t)) {
+          inMedium = true;
+          ray.o = ray.at(tEnter) + ray.dir * ctx.settings.nearEps;  // step just inside
+          ray.min = ctx.settings.nearEps;
+          ray.max = sphereExitT(ray, ctx.medium.boundCenter, ctx.medium.boundRadius);
+          continue;
+        }
+      }
+
       if (!hr.hit) {
         emission += throughput * background(ray.dir, ctx.envMap);
         break;
@@ -283,17 +299,6 @@ namespace mps::core {
       BsdfType bt = BsdfType(hr.bsdfId);
       BsdfSample bs = bsdfSample(bt, -ray.dir, hr.ng, hr.uv, rng.next1D(), rng.next1D());
 
-      // Entering a wrapped medium (transparent boundary, wi points against the normal).
-      if (mps::dot(bs.wi, hr.ng) < 0.0f && hr.mediumId != NO_MEDIUM) {
-        inMedium = true;
-        ray.o = hr.p - hr.ng * ctx.settings.eps;  // step just inside
-        ray.dir = bs.wi;
-        ray.min = ctx.settings.nearEps;
-        // Clamp the march to the wrapper sphere (medium lives only inside it).
-        ray.max = sphereExitT(ray, ctx.medium.boundCenter, ctx.medium.boundRadius);
-        continue;
-      }
-
       if (bt == BsdfType::Null) {
         // Transparent boundary: no shading, specularness unchanged.
       } else if (bt == BsdfType::Specular) {
@@ -301,8 +306,10 @@ namespace mps::core {
         // lighting. Specularness is preserved so a direct light hit still emits.
         throughput = throughput * bs.weight;   // {1,1,1}
       } else {
-        // Opaque Lambertian surface.
-        const RGB_F32 albedo = colorSample(hr.p, ctx.medium);
+        // Opaque Lambertian hard surface (floor/wall): neutral dark color so the
+        // GPIS object stands out against the backdrop. The GP surface itself is
+        // colored in the medium branch via colorSample().
+        const RGB_F32 albedo{0.28f, 0.26f, 0.28f};
         if (hr.lightId != NO_LIGHT && wasSpecular) {
           // Directly viewing a light through a specular path: emit it (NEE at the
           // previous vertex already counted it for diffuse bounces).
@@ -312,7 +319,7 @@ namespace mps::core {
                                     nextEventEstimate(hr.p, hr.ng, -ray.dir, albedo,
                                                       ctx.scene, ctx.medium, cond, mSeed, false, rng));
         }
-        throughput = throughput * bs.weight;
+        throughput = throughput * albedo;
         wasSpecular = false;
       }
 

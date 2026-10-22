@@ -174,8 +174,12 @@ int main(int argc, char** argv) {
   {
     mps::host::HdrImage env = mps::host::loadHdr("/home/dudujerry/models/envmap.hdr");
     if (env.width > 0 && env.height > 0) {
+      // Scale the HDR down so indirect/envmap reflections don't blow out the
+      // render (the raw sky is ~1-10+ radiance).
+      constexpr f32 ENVMAP_SCALE = 0.15f;
       envPixels = new mps::RGB_F32[env.pixels.size()];
-      std::memcpy(envPixels, env.pixels.data(), env.pixels.size() * sizeof(mps::RGB_F32));
+      for (size_t i = 0; i < env.pixels.size(); ++i)
+        envPixels[i] = env.pixels[i] * ENVMAP_SCALE;
       ctx.envMap.width  = env.width;
       ctx.envMap.height = env.height;
       ctx.envMap.pixels = envPixels;

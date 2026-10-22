@@ -228,15 +228,17 @@ namespace mps::host {
       buildColorGrid(cfg, worldBox3, 64);
     }
 
-    // ——— wrapper sphere (transparent, holds the medium) ———
-    cfg.host.addSphere(pos, m.boundRadius, u16(core::BsdfType::Null), 0, core::NO_LIGHT);
+    // ——— wrapper sphere ———
+    // Removed: the medium bound (boundCenter/boundRadius) is now tested directly
+    // in trace.cpp via sphereEnterT(), so no Null wrapper primitive is needed (and
+    // it can never be accidentally shaded as an opaque sphere).
 
     // ——— area lights (sampled by NEE) ———
-    cfg.host.addLight({-300.0f, 350.0f, -350.0f}, 70.0f, {26.0f, 23.0f, 19.0f});  // key
-    cfg.host.addLight({ 300.0f, 100.0f, -150.0f}, 45.0f, {10.0f, 8.0f, 7.0f});   // fill
+    cfg.host.addLight({-300.0f, 350.0f, -350.0f}, 70.0f, {5.0f, 4.0f, 3.5f});   // key
+    cfg.host.addLight({ 300.0f, 100.0f, -150.0f}, 45.0f, {2.0f, 1.6f, 1.4f});   // fill
 
-    // ——— floor + back wall ———
-    addFloorWalls(cfg, -300.0f, -850.0f, 500.0f);
+    // ——— floor + back wall (raised floor + taller wall so they fill the frame) ———
+    addFloorWalls(cfg, -150.0f, -850.0f, 550.0f);
 
     // ——— camera: straight ahead ———
     cfg.camera = core::makeCamera({0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f},
