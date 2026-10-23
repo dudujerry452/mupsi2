@@ -96,13 +96,33 @@ def main():
     diag = np.linalg.norm(verts.max(0) - verts.min(0))
     verts = verts / diag
 
-    W, mass = cotan_laplacian(verts, faces)
+    # Remove isolated vertices (no incident face): they give zero mass and make
+    # the generalized eigenproblem / factorization singular. Solve on the
+    # connected subset, then pad the eigenvectors back to full N so the vertex
+    # indexing still matches the renderer's mesh (isolated verts -> phi = 0).
+    used = np.zeros(N, dtype=bool)
+    for f in faces:
+        used[f] = True
+    verts_sub, faces_sub, remap = verts, faces, None
+    if not used.all():
+        remap = np.full(N, -1, dtype=np.int64)
+        remap[used] = np.arange(int(used.sum()))
+        verts_sub = verts[used]
+        faces_sub = remap[faces]
+        print(f"removed {int((~used).sum())} isolated vertices")
+
+    W, mass = cotan_laplacian(verts_sub, faces_sub)
+    mass = np.maximum(mass, 1e-12)           # guard against zero-area verts
 
     print(f"eigendecomposition (K={K})...")
     eps = 1e-8
     evals, evecs = eigsh(-W, k=K, M=sparse.diags(mass), sigma=eps, which="LM")
     lam = np.clip(evals, 0.0, None)          # LBO eigenvalues (ascending, λ0≈0)
-    Phi = evecs.astype(np.float32)            # (N, K), columns = eigenvectors
+    if remap is not None:
+        Phi = np.zeros((N, K), dtype=np.float32)
+        Phi[used] = evecs.astype(np.float32)
+    else:
+        Phi = evecs.astype(np.float32)        # (N, K), columns = eigenvectors
     print(f"lambda[0..4] = {lam[:5]}")
 
     # Place S heat sources on the surface. Golden-angle hue spacing + full
