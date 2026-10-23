@@ -69,7 +69,8 @@ namespace mps::host {
     // extent along that axis — NOT the AABB — so the bottom of the model gets
     // sigmaMin and the top gets sigmaMax.
     void buildSigmaRampField(SceneConfig& cfg, const core::AABB& bounds, u32 res,
-                             f32 sigmaMin, f32 sigmaMax, f32 baseLength, i32 axis) {
+                             f32 sigmaMin, f32 sigmaMax, f32 baseLength, i32 axis,
+                             bool sigmaClamp) {
       const vec3f diag = bounds.diagonal();
       const f32 maxExtent = mps::maxf(diag.x, mps::maxf(diag.y, diag.z));
       const f32 cellSize = (res > 0) ? maxExtent / f32(res) : 1.0f;
@@ -89,7 +90,9 @@ namespace mps::host {
             const vec3f p = mn + vec3f{f32(i), f32(j), f32(k)} * cellSize;
             const f32 coord = (axis == 0 ? p.x : axis == 1 ? p.y : p.z);
             const f32 t = mps::clampf((coord - mnCoord) / span, 0.0f, 1.0f);
-            const f32 sig = sigmaMin + (sigmaMax - sigmaMin) * t;
+            // clamp mode: hard step at the model midpoint (t=0.5), else linear ramp.
+            const f32 sig = sigmaClamp ? (t < 0.5f ? sigmaMin : sigmaMax)
+                                       : (sigmaMin + (sigmaMax - sigmaMin) * t);
             const size_t idx = size_t(i) + res * (size_t(j) + res * size_t(k));
             cfg.host.kernelSigma[idx]  = sig;
             cfg.host.kernelLength[idx] = baseLength;
@@ -98,8 +101,8 @@ namespace mps::host {
       cfg.medium.kernelField.origin   = mn;
       cfg.medium.kernelField.cellSize = cellSize;
       cfg.medium.kernelField.res      = res;
-      mplog("buildSigmaRampField: axis={} sigma in [{:.2f}, {:.2f}] over mesh bbox",
-            axisName, sigmaMin, sigmaMax);
+      mplog("buildSigmaRampField: axis={} {} sigma in [{:.2f}, {:.2f}] over mesh bbox",
+            axisName, sigmaClamp ? "CLAMP(step@0.5)" : "ramp", sigmaMin, sigmaMax);
     }
 
     // Bake the analytic 3D color field into a dense RGB voxel grid (approach 1).
@@ -227,7 +230,7 @@ namespace mps::host {
                                f32 dist, f32 targetRadius, core::GPMode mode,
                                f32 sigma, f32 kernelRadius, bool useVoxel, u32 voxelRes,
                                bool nonStationary, i32 sigmaFieldAxis, f32 sigmaMin, f32 sigmaMax,
-                               vec3f marginScale) {
+                               bool sigmaClamp, vec3f marginScale) {
     SceneConfig cfg;
 
     cfg.settings.maxBounce = 10;
@@ -351,7 +354,7 @@ namespace mps::host {
       // top), sigmaMin -> sigmaMax. Length scale stays constant.
       core::AABB worldBox4 = core::AABB::empty();
       for (const vec3f& v : worldVerts) worldBox4.extend(v);
-      buildSigmaRampField(cfg, worldBox4, 64, sigmaMin, sigmaMax, kernelRadius, sigmaFieldAxis);
+      buildSigmaRampField(cfg, worldBox4, 64, sigmaMin, sigmaMax, kernelRadius, sigmaFieldAxis, sigmaClamp);
     }
 
     // Bake the dense RGB color grid (GPIS texturing approach 1), cheap at res 64.
@@ -379,22 +382,22 @@ namespace mps::host {
     return cfg;
   }
 
-  SceneConfig buildSpotGpScene(i32 w, i32 h, f32 sigma, i32 sigmaFieldAxis, f32 sigmaMin, f32 sigmaMax, vec3f marginScale) {
+  SceneConfig buildSpotGpScene(i32 w, i32 h, f32 sigma, i32 sigmaFieldAxis, f32 sigmaMin, f32 sigmaMax, bool sigmaClamp, vec3f marginScale) {
     return buildMeshGpScene("/home/dudujerry/models/spot/spot_triangulated_good.obj",
                             w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, sigma, 1.0f,
-                            true, 256, false, sigmaFieldAxis, sigmaMin, sigmaMax, marginScale);
+                            true, 256, false, sigmaFieldAxis, sigmaMin, sigmaMax, sigmaClamp, marginScale);
   }
 
-  SceneConfig buildBunnyGpScene(i32 w, i32 h, f32 sigma, i32 sigmaFieldAxis, f32 sigmaMin, f32 sigmaMax, vec3f marginScale) {
+  SceneConfig buildBunnyGpScene(i32 w, i32 h, f32 sigma, i32 sigmaFieldAxis, f32 sigmaMin, f32 sigmaMax, bool sigmaClamp, vec3f marginScale) {
     return buildMeshGpScene("/home/dudujerry/models/bunny/bunny.obj",
                             w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, sigma, 1.0f,
-                            true, 256, false, sigmaFieldAxis, sigmaMin, sigmaMax, marginScale);
+                            true, 256, false, sigmaFieldAxis, sigmaMin, sigmaMax, sigmaClamp, marginScale);
   }
 
-  SceneConfig buildDragonGpScene(i32 w, i32 h, f32 sigma, i32 sigmaFieldAxis, f32 sigmaMin, f32 sigmaMax, vec3f marginScale) {
+  SceneConfig buildDragonGpScene(i32 w, i32 h, f32 sigma, i32 sigmaFieldAxis, f32 sigmaMin, f32 sigmaMax, bool sigmaClamp, vec3f marginScale) {
     return buildMeshGpScene("/home/dudujerry/models/dragon.obj",
                             w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, sigma, 1.0f,
-                            true, 256, false, sigmaFieldAxis, sigmaMin, sigmaMax, marginScale);
+                            true, 256, false, sigmaFieldAxis, sigmaMin, sigmaMax, sigmaClamp, marginScale);
   }
 
 }
