@@ -63,6 +63,44 @@ namespace mps::host {
             baseLength * 0.5f, baseLength * 2.0f);
     }
 
+    // Non-stationary SIGMA field: σ ramps monotonically and dramatically along one
+    // world axis (0=x, 1=y, 2=z), from 0.15×baseSigma to 2.5×baseSigma. This bakes a
+    // single render where one end of the object is crisp and the other is fuzzy —
+    // the point of "大幅变动 σ 在构建 σ 场时就要沿轴单调变化".
+    void buildSigmaRampField(SceneConfig& cfg, const core::AABB& bounds, u32 res,
+                             f32 baseSigma, f32 baseLength, i32 axis) {
+      const vec3f diag = bounds.diagonal();
+      const f32 maxExtent = mps::maxf(diag.x, mps::maxf(diag.y, diag.z));
+      const f32 cellSize = (res > 0) ? maxExtent / f32(res) : 1.0f;
+
+      cfg.host.kernelRes = res;
+      cfg.host.kernelSigma.assign(size_t(res) * res * res, 0.0f);
+      cfg.host.kernelLength.assign(size_t(res) * res * res, 0.0f);
+
+      const vec3f mn = bounds.min, mx = bounds.max;
+      const f32 span = mps::maxf(1e-6f, (axis == 0 ? mx.x - mn.x :
+                                         axis == 1 ? mx.y - mn.y : mx.z - mn.z));
+      const f32 mnCoord = (axis == 0 ? mn.x : axis == 1 ? mn.y : mn.z);
+      const char axisName = "xyz"[(axis == 0 ? 0 : axis == 1 ? 1 : 2)];
+      for (u32 k = 0; k < res; ++k)
+        for (u32 j = 0; j < res; ++j)
+          for (u32 i = 0; i < res; ++i) {
+            const vec3f p = mn + vec3f{f32(i), f32(j), f32(k)} * cellSize;
+            const f32 coord = (axis == 0 ? p.x : axis == 1 ? p.y : p.z);
+            const f32 t = mps::clampf((coord - mnCoord) / span, 0.0f, 1.0f);
+            const f32 sig = baseSigma * (0.15f + 2.5f * t);
+            const size_t idx = size_t(i) + res * (size_t(j) + res * size_t(k));
+            cfg.host.kernelSigma[idx]  = sig;
+            cfg.host.kernelLength[idx] = baseLength;
+          }
+
+      cfg.medium.kernelField.origin   = mn;
+      cfg.medium.kernelField.cellSize = cellSize;
+      cfg.medium.kernelField.res      = res;
+      mplog("buildSigmaRampField: axis={} sigma in [{:.2f}, {:.2f}]", axisName,
+            baseSigma * 0.15f, baseSigma * 2.5f);
+    }
+
     // Bake the analytic 3D color field into a dense RGB voxel grid (approach 1).
     void buildColorGrid(SceneConfig& cfg, const core::AABB& bounds, u32 res) {      const vec3f diag = bounds.diagonal();
       const f32 maxExtent = mps::maxf(diag.x, mps::maxf(diag.y, diag.z));
@@ -187,7 +225,7 @@ namespace mps::host {
   SceneConfig buildMeshGpScene(const std::string& objPath, i32 w, i32 h,
                                f32 dist, f32 targetRadius, core::GPMode mode,
                                f32 sigma, f32 kernelRadius, bool useVoxel, u32 voxelRes,
-                               bool nonStationary) {
+                               bool nonStationary, i32 sigmaFieldAxis, vec3f marginScale) {
     SceneConfig cfg;
 
     cfg.settings.maxBounce = 10;
@@ -241,15 +279,21 @@ namespace mps::host {
     m.gpMode       = mode;
     cfg.hasMedium  = true;
 
+    // With a sigma ramp the field peaks at 2.5× the base sigma; the AABB margin
+    // and the voxel narrow band must be sized for that peak (not the base).
+    const f32 maxSigma = (sigmaFieldAxis >= 0) ? sigma * 2.5f : sigma;
+
     // AABB medium bound: mesh bbox + a few σ of GP noise, with the bottom face
     // exactly on the floor (so the medium never crosses the floor plane — no
     // circular shadow gap, unlike a bounding sphere).
     {
       core::AABB wb = core::AABB::empty();
       for (const vec3f& v : worldVerts) wb.extend(v);
-      const f32 margin = 3.0f * sigma;
-      m.boundMin = wb.min - vec3f{margin, margin, margin};
-      m.boundMax = wb.max + vec3f{margin, margin, margin};
+      // Per-axis AABB margin (multiples of σ), default {3,5,3}: the top gets
+      // extra headroom because at large σ the GP surface puffs upward (ears
+      // especially) past 3σ and any zero-set outside the AABB is clipped off.
+      m.boundMin = wb.min - vec3f{marginScale.x * maxSigma, marginScale.y * maxSigma, marginScale.z * maxSigma};
+      m.boundMax = wb.max + vec3f{marginScale.x * maxSigma, marginScale.y * maxSigma, marginScale.z * maxSigma};
       // Keep the AABB's bottom a hair ABOVE the floor so the floor plane is
       // OUTSIDE the medium bound: a ray marching downward then exits the box
       // first and still hits the floor (instead of skipping past it).
@@ -278,7 +322,7 @@ namespace mps::host {
       const vec3f wdiag = worldBox.diagonal();
       const f32 maxExt = mps::maxf(wdiag.x, mps::maxf(wdiag.y, wdiag.z));
       const f32 cellSz = (voxelRes > 0) ? maxExt / f32(voxelRes) : 1.0f;
-      const f32 bandCells = (4.0f * sigma) / cellSz + 2.0f;   // 4σ (world) + margin, in cells
+      const f32 bandCells = (4.0f * maxSigma) / cellSz + 2.0f;   // 4σ (world) + margin, in cells
 
       mps::host::VoxelGridHost vg = mps::host::buildSparseSDFGrid(mm, worldBox, voxelRes, bandCells);
       cfg.host.voxelRes       = vg.res;
@@ -298,6 +342,14 @@ namespace mps::host {
       core::AABB worldBox2 = core::AABB::empty();
       for (const vec3f& v : worldVerts) worldBox2.extend(v);
       buildTestKernelField(cfg, worldBox2, 64, sigma, kernelRadius);
+    }
+
+    if (sigmaFieldAxis >= 0) {
+      // Spatially-varying SIGMA ramp along one axis (single render: one end crisp,
+      // the other fuzzy). Length scale stays constant.
+      core::AABB worldBox4 = core::AABB::empty();
+      for (const vec3f& v : worldVerts) worldBox4.extend(v);
+      buildSigmaRampField(cfg, worldBox4, 64, sigma, kernelRadius, sigmaFieldAxis);
     }
 
     // Bake the dense RGB color grid (GPIS texturing approach 1), cheap at res 64.
@@ -325,19 +377,22 @@ namespace mps::host {
     return cfg;
   }
 
-  SceneConfig buildSpotGpScene(i32 w, i32 h, f32 sigma) {
+  SceneConfig buildSpotGpScene(i32 w, i32 h, f32 sigma, i32 sigmaFieldAxis, vec3f marginScale) {
     return buildMeshGpScene("/home/dudujerry/models/spot/spot_triangulated_good.obj",
-                            w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, sigma, 1.0f);
+                            w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, sigma, 1.0f,
+                            true, 256, false, sigmaFieldAxis, marginScale);
   }
 
-  SceneConfig buildBunnyGpScene(i32 w, i32 h, f32 sigma) {
+  SceneConfig buildBunnyGpScene(i32 w, i32 h, f32 sigma, i32 sigmaFieldAxis, vec3f marginScale) {
     return buildMeshGpScene("/home/dudujerry/models/bunny/bunny.obj",
-                            w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, sigma, 1.0f);
+                            w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, sigma, 1.0f,
+                            true, 256, false, sigmaFieldAxis, marginScale);
   }
 
-  SceneConfig buildDragonGpScene(i32 w, i32 h, f32 sigma) {
+  SceneConfig buildDragonGpScene(i32 w, i32 h, f32 sigma, i32 sigmaFieldAxis, vec3f marginScale) {
     return buildMeshGpScene("/home/dudujerry/models/dragon.obj",
-                            w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, sigma, 1.0f);
+                            w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, sigma, 1.0f,
+                            true, 256, false, sigmaFieldAxis, marginScale);
   }
 
 }

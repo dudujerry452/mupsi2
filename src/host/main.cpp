@@ -39,6 +39,9 @@ static void printUsage() {
     "  sigma     GP noise amplitude override\n"
     "  color     constant | voxel | surface | kernel | heatkernel   (texturing)\n"
     "  lscale    per-axis length scale Lx,Ly,Lz (comma-separated; unequal => anisotropic)\n"
+    "  sigmafield x|y|z   ramp sigma monotonically along one axis (0.15x -> 2.5x)\n"
+    "  margin  mx,my,mz   medium AABB margin as multiples of sigma (default 3,5,3)\n"
+    "  yaw/pitch orbit the camera AROUND the object (deg); 0/0 = default front view\n"
     "  heat      path to a precomputed HKTEx .bin (tools/precompute_heat.py)\n"
     "  output    output PPM path (default test.ppm)\n"
     "  -h/--help show this help\n";
@@ -48,9 +51,10 @@ int main(int argc, char** argv) {
   mplog("mupsi2 renderer starting");
 
   // ——— CLI parsing (positional for brevity, or --name value) ———
-  std::string scene = "spot", modeArg, bsdfArg, colorArg, heatArg, outputArg = "test.ppm", lscaleArg;
-  i32 w = 256, h = 256, sppArg = 0;
+  std::string scene = "spot", modeArg, bsdfArg, colorArg, heatArg, outputArg = "test.ppm", lscaleArg, sigmaFieldArg, marginArg;
+  i32 w = 256, h = 256, sppArg = 0, sigmaFieldAxis = -1;
   f32 sigmaArg = 0.0f, yawArg = 0.0f, pitchArg = 0.0f;
+  vec3f marginScale{3.0f, 5.0f, 3.0f};   // AABB margin (multiples of sigma)
   bool noMedia = false, noEnv = false;
 
   auto need = [&](i32& i, const char* name) -> std::string {
@@ -73,6 +77,8 @@ int main(int argc, char** argv) {
       else if (a == "--color")   colorArg = need(i, "--color");
       else if (a == "--heat")    heatArg = need(i, "--heat");
       else if (a == "--lscale")  lscaleArg = need(i, "--lscale");
+      else if (a == "--sigmafield") sigmaFieldArg = need(i, "--sigmafield");
+      else if (a == "--margin")   marginArg = need(i, "--margin");
       else if (a == "--output")  outputArg = need(i, "--output");
       else if (a == "--yaw")     yawArg = std::atof(need(i, "--yaw").c_str());
       else if (a == "--pitch")   pitchArg = std::atof(need(i, "--pitch").c_str());
@@ -96,6 +102,25 @@ int main(int argc, char** argv) {
     // extra args are ignored for positional brevity (use --output for the path)
   }
 
+  // Medium AABB margin (multiples of sigma), per-axis.
+  if (!marginArg.empty()) {
+    f32 mx = 0, my = 0, mz = 0;
+    if (std::sscanf(marginArg.c_str(), "%f,%f,%f", &mx, &my, &mz) != 3 ||
+        mx <= 0.0f || my <= 0.0f || mz <= 0.0f) {
+      std::cerr << "bad --margin '" << marginArg << "' (need mx,my,mz > 0)\n";
+      return 1;
+    }
+    marginScale = {mx, my, mz};
+  }
+
+  // Sigma-field axis (spatially-varying sigma, ramp along one axis).
+  if (!sigmaFieldArg.empty()) {
+    if      (sigmaFieldArg == "x") sigmaFieldAxis = 0;
+    else if (sigmaFieldArg == "y") sigmaFieldAxis = 1;
+    else if (sigmaFieldArg == "z") sigmaFieldAxis = 2;
+    else { std::cerr << "unknown --sigmafield '" << sigmaFieldArg << "' (use x|y|z)\n"; return 1; }
+  }
+
   // 1. host staging. sigma must be known at build time (it sizes the medium
   //    bound margin AND the voxel narrow band), so fold the CLI override in here.
   const f32 meshSigma  = (sigmaArg > 0.0f) ? sigmaArg : 1.0f;
@@ -104,24 +129,45 @@ int main(int argc, char** argv) {
   mps::host::SceneConfig cfg;
   if      (scene == "sphere")   cfg = mps::host::buildDefaultScene(w, h);
   else if (scene == "spheregp") cfg = mps::host::buildGpSphereScene(w, h, sphereSigma);
-  else if (scene == "spot")     cfg = mps::host::buildSpotGpScene(w, h, meshSigma);
-  else if (scene == "bunny")    cfg = mps::host::buildBunnyGpScene(w, h, meshSigma);
-  else if (scene == "dragon")   cfg = mps::host::buildDragonGpScene(w, h, meshSigma);
+  else if (scene == "spot")     cfg = mps::host::buildSpotGpScene(w, h, meshSigma, sigmaFieldAxis, marginScale);
+  else if (scene == "bunny")    cfg = mps::host::buildBunnyGpScene(w, h, meshSigma, sigmaFieldAxis, marginScale);
+  else if (scene == "dragon")   cfg = mps::host::buildDragonGpScene(w, h, meshSigma, sigmaFieldAxis, marginScale);
   else if (scene == "dragonns") // dragon + non-stationary kernel field (Eq. 25 test)
     cfg = mps::host::buildMeshGpScene("/home/dudujerry/models/dragon.obj", w, h,
                                       500.0f, 150.0f, core::GPMode::SingleRealization,
-                                      meshSigma, 1.0f, true, 256, true);
+                                      meshSigma, 1.0f, true, 256, true, sigmaFieldAxis, marginScale);
   else {
     std::cerr << "unknown scene '" << scene << "' (use sphere|spheregp|spot|bunny|dragon|dragonns)\n";
     return 1;
   }
 
-  // Rotate the camera view (degrees) around the fixed position for multi-angle shots.
+  // Orbit the camera AROUND the object (not just a view-direction change).
+  // yaw=pitch=0 reproduces the original camera exactly. The orbit center is the
+  // GP medium's AABB center; the radius is the original camera-to-center distance.
   if (yawArg != 0.0f || pitchArg != 0.0f) {
     const f32 yaw   = yawArg   * mps::pi / 180.0f;
     const f32 pitch = pitchArg * mps::pi / 180.0f;
-    const vec3f dir{mps::sinf(yaw) * mps::cosf(pitch), mps::sinf(pitch), -mps::cosf(yaw) * mps::cosf(pitch)};
-    cfg.camera = mps::core::makeCamera(cfg.camera.pos, mps::normalize(dir), {0.0f, 1.0f, 0.0f}, 45.0f, w, h);
+    const vec3f objCenter = 0.5f * (cfg.medium.boundMin + cfg.medium.boundMax);
+    const vec3f camHome   = cfg.camera.pos;
+    vec3f dir = camHome - objCenter;      // home direction (yaw=pitch=0)
+    const f32 R = mps::norm(dir);
+    if (R < 1e-6f) dir = {0.0f, 0.0f, 1.0f};
+
+    // yaw around world Y, then pitch around world X.
+    const f32 cy = mps::cosf(yaw),  sy = mps::sinf(yaw);
+    const f32 cp = mps::cosf(pitch), sp = mps::sinf(pitch);
+    f32 x = dir.x * cy + dir.z * sy;
+    f32 z = -dir.x * sy + dir.z * cy;
+    f32 y = dir.y;
+    f32 y2 = y * cp - z * sp;
+    f32 z2 = y * sp + z * cp;
+    dir = {x, y2, z2};
+
+    const vec3f newPos = objCenter + dir;
+    const vec3f forward = mps::normalize(objCenter - newPos);
+    const vec3f up = (mps::fabsf(forward.y) > 0.99f) ? vec3f{0.0f, 0.0f, 1.0f}
+                                                     : vec3f{0.0f, 1.0f, 0.0f};
+    cfg.camera = mps::core::makeCamera(newPos, forward, up, 45.0f, w, h);
   }
 
   // Debug: disable the GP medium (render hard surfaces only).
