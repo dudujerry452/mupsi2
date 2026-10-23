@@ -45,12 +45,12 @@ namespace mps::host {
   // margin and the voxel narrow-band width, so it must be set at build time.
   SceneConfig buildSpotGpScene (i32 w = 256, i32 h = 256, f32 sigma = 1.0f, i32 sigmaFieldAxis = -1,
                                  f32 sigmaMin = 0.3f, f32 sigmaMax = 6.0f, bool sigmaClamp = false,
-                                 vec3f marginScale = {3.0f, 5.0f, 3.0f});
+                                 vec3f marginScale = {3.0f, 5.0f, 3.0f}, u32 voxelRes = 256);
   SceneConfig buildBunnyGpScene(i32 w = 512, i32 h = 512, f32 sigma = 1.0f, i32 sigmaFieldAxis = -1,
                                  f32 sigmaMin = 0.3f, f32 sigmaMax = 6.0f, bool sigmaClamp = false,
-                                 vec3f marginScale = {3.0f, 5.0f, 3.0f});
+                                 vec3f marginScale = {3.0f, 5.0f, 3.0f}, u32 voxelRes = 256);
   SceneConfig buildDragonGpScene(i32 w = 512, i32 h = 512, f32 sigma = 1.0f, i32 sigmaFieldAxis = -1,
                                  f32 sigmaMin = 0.3f, f32 sigmaMax = 6.0f, bool sigmaClamp = false,
-                                 vec3f marginScale = {3.0f, 5.0f, 3.0f});
+                                 vec3f marginScale = {3.0f, 5.0f, 3.0f}, u32 voxelRes = 256);
 
 }

@@ -43,6 +43,7 @@ static void printUsage() {
     "  sigmarange min,max sigma at the two ends of the ramp (default 0.3,6.0)\n"
     "  sigmaclamp   step sigma at the model midpoint (t<0.5:min, t>=0.5:max)\n"
     "  margin  mx,my,mz   medium AABB margin as multiples of sigma (default 3,5,3)\n"
+    "  voxelres N         voxel SDF grid resolution (default 256; higher = thinner features)\n"
     "  yaw/pitch orbit the camera AROUND the object (deg); 0/0 = default front view\n"
     "  heat      path to a precomputed HKTEx .bin (tools/precompute_heat.py)\n"
     "  output    output PPM path (default test.ppm)\n"
@@ -54,7 +55,7 @@ int main(int argc, char** argv) {
 
   // ——— CLI parsing (positional for brevity, or --name value) ———
   std::string scene = "spot", modeArg, bsdfArg, colorArg, heatArg, outputArg = "test.ppm", lscaleArg, sigmaFieldArg, marginArg, sigmaRangeArg;
-  i32 w = 256, h = 256, sppArg = 0, sigmaFieldAxis = -1;
+  i32 w = 256, h = 256, sppArg = 0, sigmaFieldAxis = -1, voxelResArg = 256;
   f32 sigmaArg = 0.0f, yawArg = 0.0f, pitchArg = 0.0f;
   f32 sigmaMin = 0.3f, sigmaMax = 6.0f;   // sigma-field ramp range
   bool sigmaClamp = false;                // step at model midpoint instead of ramp
@@ -85,6 +86,7 @@ int main(int argc, char** argv) {
       else if (a == "--sigmarange") sigmaRangeArg = need(i, "--sigmarange");
       else if (a == "--sigmaclamp") sigmaClamp = true;
       else if (a == "--margin")   marginArg = need(i, "--margin");
+      else if (a == "--voxelres")  voxelResArg = std::atoi(need(i, "--voxelres").c_str());
       else if (a == "--output")  outputArg = need(i, "--output");
       else if (a == "--yaw")     yawArg = std::atof(need(i, "--yaw").c_str());
       else if (a == "--pitch")   pitchArg = std::atof(need(i, "--pitch").c_str());
@@ -144,9 +146,9 @@ int main(int argc, char** argv) {
   mps::host::SceneConfig cfg;
   if      (scene == "sphere")   cfg = mps::host::buildDefaultScene(w, h);
   else if (scene == "spheregp") cfg = mps::host::buildGpSphereScene(w, h, sphereSigma);
-  else if (scene == "spot")     cfg = mps::host::buildSpotGpScene(w, h, meshSigma, sigmaFieldAxis, sigmaMin, sigmaMax, sigmaClamp, marginScale);
-  else if (scene == "bunny")    cfg = mps::host::buildBunnyGpScene(w, h, meshSigma, sigmaFieldAxis, sigmaMin, sigmaMax, sigmaClamp, marginScale);
-  else if (scene == "dragon")   cfg = mps::host::buildDragonGpScene(w, h, meshSigma, sigmaFieldAxis, sigmaMin, sigmaMax, sigmaClamp, marginScale);
+  else if (scene == "spot")     cfg = mps::host::buildSpotGpScene(w, h, meshSigma, sigmaFieldAxis, sigmaMin, sigmaMax, sigmaClamp, marginScale, u32(voxelResArg));
+  else if (scene == "bunny")    cfg = mps::host::buildBunnyGpScene(w, h, meshSigma, sigmaFieldAxis, sigmaMin, sigmaMax, sigmaClamp, marginScale, u32(voxelResArg));
+  else if (scene == "dragon")   cfg = mps::host::buildDragonGpScene(w, h, meshSigma, sigmaFieldAxis, sigmaMin, sigmaMax, sigmaClamp, marginScale, u32(voxelResArg));
   else if (scene == "dragonns") // dragon + non-stationary kernel field (Eq. 25 test)
     cfg = mps::host::buildMeshGpScene("/home/dudujerry/models/dragon.obj", w, h,
                                       500.0f, 150.0f, core::GPMode::SingleRealization,

@@ -382,22 +382,22 @@ namespace mps::host {
     return cfg;
   }
 
-  SceneConfig buildSpotGpScene(i32 w, i32 h, f32 sigma, i32 sigmaFieldAxis, f32 sigmaMin, f32 sigmaMax, bool sigmaClamp, vec3f marginScale) {
+  SceneConfig buildSpotGpScene(i32 w, i32 h, f32 sigma, i32 sigmaFieldAxis, f32 sigmaMin, f32 sigmaMax, bool sigmaClamp, vec3f marginScale, u32 voxelRes) {
     return buildMeshGpScene("/home/dudujerry/models/spot/spot_triangulated_good.obj",
                             w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, sigma, 1.0f,
-                            true, 256, false, sigmaFieldAxis, sigmaMin, sigmaMax, sigmaClamp, marginScale);
+                            true, voxelRes, false, sigmaFieldAxis, sigmaMin, sigmaMax, sigmaClamp, marginScale);
   }
 
-  SceneConfig buildBunnyGpScene(i32 w, i32 h, f32 sigma, i32 sigmaFieldAxis, f32 sigmaMin, f32 sigmaMax, bool sigmaClamp, vec3f marginScale) {
+  SceneConfig buildBunnyGpScene(i32 w, i32 h, f32 sigma, i32 sigmaFieldAxis, f32 sigmaMin, f32 sigmaMax, bool sigmaClamp, vec3f marginScale, u32 voxelRes) {
     return buildMeshGpScene("/home/dudujerry/models/bunny/bunny.obj",
                             w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, sigma, 1.0f,
-                            true, 256, false, sigmaFieldAxis, sigmaMin, sigmaMax, sigmaClamp, marginScale);
+                            true, voxelRes, false, sigmaFieldAxis, sigmaMin, sigmaMax, sigmaClamp, marginScale);
   }
 
-  SceneConfig buildDragonGpScene(i32 w, i32 h, f32 sigma, i32 sigmaFieldAxis, f32 sigmaMin, f32 sigmaMax, bool sigmaClamp, vec3f marginScale) {
+  SceneConfig buildDragonGpScene(i32 w, i32 h, f32 sigma, i32 sigmaFieldAxis, f32 sigmaMin, f32 sigmaMax, bool sigmaClamp, vec3f marginScale, u32 voxelRes) {
     return buildMeshGpScene("/home/dudujerry/models/dragon.obj",
                             w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, sigma, 1.0f,
-                            true, 256, false, sigmaFieldAxis, sigmaMin, sigmaMax, sigmaClamp, marginScale);
+                            true, voxelRes, false, sigmaFieldAxis, sigmaMin, sigmaMax, sigmaClamp, marginScale);
   }
 
 }

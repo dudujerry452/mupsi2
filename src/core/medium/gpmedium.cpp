@@ -32,14 +32,16 @@ namespace mps::core {
 
   } // namespace
 
-  // 1D noise is valid only for isotropic kernels AND a memory model that does
-  // NOT require a single fixed 3D realization (paper line 477: Renewal / Renewal
-  // Half+ / Renewal+). Anisotropic kernels always fall back to 3D noise.
+  // 1D noise is valid only for STATIONARY isotropic kernels (no spatially-varying
+  // sigma/L field) AND a memory model that does NOT require a single fixed 3D
+  // realization (paper line 477: Renewal / Renewal Half+ / Renewal+). Anisotropic
+  // kernels AND non-stationary fields always fall back to 3D noise.
   MPHD MPINL bool use1DNoise(const Medium& m) {
     if constexpr (SEKernel::isotropic) {
       const bool iso = m.lengthScale.x == m.lengthScale.y &&
                        m.lengthScale.y == m.lengthScale.z;
-      return iso && m.gpMode != GPMode::SingleRealization;
+      const bool stationary = m.kernelField.empty();
+      return iso && stationary && m.gpMode != GPMode::SingleRealization;
     }
     return false;
   }
