@@ -10,15 +10,25 @@ namespace mps::core {
     i32 cy = i32(mps::floorf(p.y / cellSize));
     i32 cz = i32(mps::floorf(p.z / cellSize));
 
-    const f32 L2 = sigmaL2At(p).y;
+    const vec3f L2 = lengthScale2At(p);   // per-axis {Lx², Ly², Lz²}
     const f32 support2 = cellSize * cellSize;   // compact support radius = cellSize (= kernelRadius)
+
+    // Adaptive neighborhood: the kernel's support extends Li·cellSize along axis
+    // i (the anisotropic-distance cutoff q = support2), so iterate ceil(Li) cells
+    // each way. Isotropic default Li=1 → the original 3×3×3 (±1 cell) block.
+    auto toCell = [&](f32 L) -> i32 {   // ceil(L) without a math call (device-safe)
+      const i32 f = i32(mps::floorf(L));
+      return (L > f32(f)) ? f + 1 : f;
+    };
+    const i32 rx = mps::maxf(1, toCell(mps::sqrtf(L2.x)));
+    const i32 ry = mps::maxf(1, toCell(mps::sqrtf(L2.y)));
+    const i32 rz = mps::maxf(1, toCell(mps::sqrtf(L2.z)));
 
     vec4f acc{0.0f, 0.0f, 0.0f, 0.0f};
 
-    // Sum impulses from the 3×3×3 neighborhood of cells covering the kernel's support.
-    for (i32 dx = -1; dx <= 1; ++dx) {
-      for (i32 dy = -1; dy <= 1; ++dy) {
-        for (i32 dz = -1; dz <= 1; ++dz) {
+    for (i32 dx = -rx; dx <= rx; ++dx) {
+      for (i32 dy = -ry; dy <= ry; ++dy) {
+        for (i32 dz = -rz; dz <= rz; ++dz) {
           i32 nx = cx + dx, ny = cy + dy, nz = cz + dz;
           vec3f cellOrigin{f32(nx) * cellSize, f32(ny) * cellSize, f32(nz) * cellSize};
 
@@ -30,15 +40,16 @@ namespace mps::core {
             vec3f s = cellOrigin + vec3f{rng.next1D(), rng.next1D(), rng.next1D()} * cellSize;
             f32 w = (rng.next1D() < 0.5f) ? -1.0f : 1.0f;
 
-            // Compact-support cull: skip impulses outside the kernel support without
-            // evaluating exp() (paper §4.2.2, reference cell3D).
+            // Compact-support cull in the ANISOTROPIC distance (paper §4.2.2,
+            // reference cell3D): skip impulses with q ≥ support² without evaluating
+            // exp().
             vec3f d = p - s;
-            f32 d2 = mps::dot(d, d);
-            if (d2 >= support2) continue;
+            const f32 q = (d.x * d.x) / L2.x + (d.y * d.y) / L2.y + (d.z * d.z) / L2.z;
+            if (q >= support2) continue;
 
-            // Evaluate h once; ∇h = h·(-2/L²)(p-s).
-            f32 h = mps::expf(-d2 / L2);
-            vec3f g = h * (-2.0f / L2) * d;
+            // Evaluate h once; ∇h = h·(-2)(d_x/Lx², d_y/Ly², d_z/Lz²).
+            f32 h = mps::expf(-q);
+            vec3f g = h * vec3f{-2.0f * d.x / L2.x, -2.0f * d.y / L2.y, -2.0f * d.z / L2.z};
 
             acc.x += w * h;
             acc.y += w * g.x;
@@ -58,7 +69,7 @@ namespace mps::core {
     const f32 frac  = tGrid - mps::floorf(tGrid);
     const i32 ci    = i32(mps::floorf(tGrid));
 
-    const f32 L2       = sigmaL2At(p).y;
+    const f32 L2       = lengthScale2At(p).x;   // isotropic scalar (1D path only)
     const f32 support2 = cellSize * cellSize;   // compact support radius = cellSize
 
     f32 val = 0.0f, gradT = 0.0f;
@@ -81,7 +92,7 @@ namespace mps::core {
       }
     }
 
-    const f32 scale = sigmaL2At(p).x / mps::sqrtf(variance1D(p));
+    const f32 scale = sigmaAt(p) / mps::sqrtf(variance1D(p));
     return {val * scale, gradT * scale};
   }
 

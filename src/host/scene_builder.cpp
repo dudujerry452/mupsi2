@@ -75,7 +75,7 @@ namespace mps::host {
           for (u32 i = 0; i < res; ++i) {
             const vec3f p = bounds.min + vec3f{f32(i), f32(j), f32(k)} * cellSize;
             cfg.host.colorGrid[size_t(i) + res * (size_t(j) + res * size_t(k))] =
-                core::kernelColor(p, bounds.min, bounds.max);
+                core::fieldColor(p, bounds.min, bounds.max);
           }
 
       cfg.medium.colorGrid.origin   = bounds.min;
@@ -140,6 +140,47 @@ namespace mps::host {
     cfg.camera = core::makeCamera({0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f},
                                   45.0f, w, h);
 
+    return cfg;
+  }
+
+  SceneConfig buildGpSphereScene(i32 w, i32 h, f32 sigma) {
+    SceneConfig cfg;
+
+    cfg.settings.maxBounce = 10;
+    cfg.settings.eps      = core::EPS_SURFACE;
+    cfg.settings.nearEps  = core::EPS_NEAR;
+    cfg.spp = 1;
+
+    // ——— GP medium: sphere mean + sparse SE convolution noise ———
+    core::Medium& m = cfg.medium;
+    m.type           = core::MediumType::GP;
+    m.meanType       = core::MeanType::Sphere;
+    m.meanCenter     = {0.0f, 0.0f, -500.0f};
+    m.meanRadius     = 150.0f;
+    m.sceneScale     = 150.0f;
+    m.sigma          = sigma;
+    m.lengthScale    = {1.0f, 1.0f, 1.0f};
+    m.kernelRadius   = 3.0f;
+    m.impulseDensity = 3;
+    m.gpMode         = core::GPMode::RenewalPlus;
+    cfg.hasMedium    = true;
+
+    {
+      const f32 half = m.meanRadius + 3.0f * m.sigma;
+      m.boundMin = m.meanCenter - vec3f{half, half, half};
+      m.boundMax = m.meanCenter + vec3f{half, half, half};
+      m.boundMin.y = -300.0f;
+    }
+
+    // ——— area lights (sampled by NEE) ———
+    cfg.host.addLight({-250.0f, 350.0f, -350.0f}, 70.0f, {26.0f, 23.0f, 19.0f});
+    cfg.host.addLight({ 300.0f,  80.0f, -200.0f}, 45.0f, {10.0f, 8.0f, 7.0f});
+
+    // ——— floor + back wall ———
+    addFloorWalls(cfg, -300.0f, -850.0f, 500.0f);
+
+    cfg.camera = core::makeCamera({0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f, 0.0f},
+                                  45.0f, w, h);
     return cfg;
   }
 
@@ -231,7 +272,15 @@ namespace mps::host {
       mm.bvhNodeOffset  = cfg.host.meshMeans[0].bvhNodeOffset;
       mm.bvhTriOffset   = cfg.host.meshMeans[0].bvhTriOffset;
 
-      mps::host::VoxelGridHost vg = mps::host::buildSparseSDFGrid(mm, worldBox, voxelRes, 4.0f);
+      // Narrow band sized to the GP noise amplitude: the ±band fallback of the
+      // sparse grid must exceed ~3σ so the noise does not create spurious zero
+      // surfaces far from the mesh (otherwise large σ fills the whole AABB).
+      const vec3f wdiag = worldBox.diagonal();
+      const f32 maxExt = mps::maxf(wdiag.x, mps::maxf(wdiag.y, wdiag.z));
+      const f32 cellSz = (voxelRes > 0) ? maxExt / f32(voxelRes) : 1.0f;
+      const f32 bandCells = (4.0f * sigma) / cellSz + 2.0f;   // 4σ (world) + margin, in cells
+
+      mps::host::VoxelGridHost vg = mps::host::buildSparseSDFGrid(mm, worldBox, voxelRes, bandCells);
       cfg.host.voxelRes       = vg.res;
       cfg.host.voxelSignGrid  = std::move(vg.signGrid);
       cfg.host.voxelBandIndex = std::move(vg.bandIndex);
@@ -263,7 +312,7 @@ namespace mps::host {
     // no wrapper primitive is needed (and none can be accidentally shaded).
 
     // ——— area lights (sampled by NEE) ———
-    cfg.host.addLight({-300.0f, 350.0f, -350.0f}, 70.0f, {5.0f, 4.0f, 3.5f});   // key
+    cfg.host.addLight({ -300.0f, 350.0f, -350.0f}, 70.0f, {5.0f, 4.0f, 3.5f});   // key
     cfg.host.addLight({ 300.0f, 100.0f, -150.0f}, 45.0f, {2.0f, 1.6f, 1.4f});   // fill
 
     // ——— floor + back wall (raised floor + taller wall so they fill the frame) ———
@@ -276,19 +325,19 @@ namespace mps::host {
     return cfg;
   }
 
-  SceneConfig buildSpotGpScene(i32 w, i32 h) {
+  SceneConfig buildSpotGpScene(i32 w, i32 h, f32 sigma) {
     return buildMeshGpScene("/home/dudujerry/models/spot/spot_triangulated_good.obj",
-                            w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, 1.0f, 1.0f);
+                            w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, sigma, 1.0f);
   }
 
-  SceneConfig buildBunnyGpScene(i32 w, i32 h) {
+  SceneConfig buildBunnyGpScene(i32 w, i32 h, f32 sigma) {
     return buildMeshGpScene("/home/dudujerry/models/bunny/bunny.obj",
-                            w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, 1.0f, 1.0f);
+                            w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, sigma, 1.0f);
   }
 
-  SceneConfig buildDragonGpScene(i32 w, i32 h) {
+  SceneConfig buildDragonGpScene(i32 w, i32 h, f32 sigma) {
     return buildMeshGpScene("/home/dudujerry/models/dragon.obj",
-                            w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, 1.0f, 1.0f);
+                            w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, sigma, 1.0f);
   }
 
 }

@@ -10,6 +10,12 @@ namespace mps::core {
 
   namespace {
 
+    // Runtime kernel-type gate: the §6 analytical NDF NEE and the UNI-side MIS
+    // weight are only valid for an ISOTROPIC kernel (g_xy ⊥ g_z decomposition).
+    MPHD MPINL bool mediumIsIsotropic(const Medium& m) {
+      return m.lengthScale.x == m.lengthScale.y && m.lengthScale.y == m.lengthScale.z;
+    }
+
     // GPIS surface color by the selected texturing approach.
     MPHD MPINL RGB_F32 colorSample(const vec3f& p, const Medium& m) {
       const ColorMethod cm = ColorMethod(m.colorMethod);
@@ -213,10 +219,10 @@ namespace mps::core {
                                       nextEventEstimate(ms.p, ms.normal, -ray.dir, albedo,
                                                         ctx.scene, ctx.medium, cond, mSeed, true, rng));
           } else if (gbt == BsdfType::Specular) {
-            // §6 NDF next-event estimation for the delta microsurface. Compile-time
-            // gated on an isotropic kernel; runtime gated on a memory model that has
-            // a normal distribution (Renewal/RenewalHalf+/Renewal+, not Single).
-            if constexpr (SEKernel::isotropic) {
+            // §6 NDF next-event estimation for the delta microsurface. Gated on an
+            // isotropic kernel + a memory model with a normal distribution
+            // (Renewal/RenewalHalf+/Renewal+, not Single).
+            if (mediumIsIsotropic(ctx.medium)) {
               if (ctx.medium.gpMode != GPMode::SingleRealization) {
                 emission += throughput * specularGpNee(ms, ray.dir, ctx.scene, ctx.medium,
                                                        cond, mSeed, true, rng);
@@ -233,7 +239,7 @@ namespace mps::core {
             // UNI-side MIS weight (power heuristic): scale the recursive mirror
             // contribution by f²/(p_ω² + f²), where f is the NDF in direction
             // space and p_ω is the light-sampling pdf of the scattered direction.
-            if constexpr (SEKernel::isotropic) {
+            if (mediumIsIsotropic(ctx.medium)) {
               if (ctx.medium.gpMode != GPMode::SingleRealization) {
                 const f32 gz = mps::dot(ms.gradNoise, ray.dir);
                 const vec3f gxy = ms.gradNoise - gz * ray.dir;

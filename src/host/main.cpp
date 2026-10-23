@@ -32,12 +32,13 @@ static void printUsage() {
     "         [--sigma f] [--color c] [--heat FILE] [--output FILE]\n"
     "\n"
     "Options:\n"
-    "  scene     sphere | spot | bunny | dragon | dragonns   (default spot)\n"
+    "  scene     sphere | spheregp | spot | bunny | dragon | dragonns   (default spot)\n"
     "  mode      single | renewal   (GP memory model override)\n"
     "  bsdf      lambertian | specular   (GP surface BSDF override)\n"
     "  spp       samples per pixel (default 1)\n"
     "  sigma     GP noise amplitude override\n"
     "  color     constant | voxel | surface | kernel | heatkernel   (texturing)\n"
+    "  lscale    per-axis length scale Lx,Ly,Lz (comma-separated; unequal => anisotropic)\n"
     "  heat      path to a precomputed HKTEx .bin (tools/precompute_heat.py)\n"
     "  output    output PPM path (default test.ppm)\n"
     "  -h/--help show this help\n";
@@ -47,7 +48,7 @@ int main(int argc, char** argv) {
   mplog("mupsi2 renderer starting");
 
   // ——— CLI parsing (positional for brevity, or --name value) ———
-  std::string scene = "spot", modeArg, bsdfArg, colorArg, heatArg, outputArg = "test.ppm";
+  std::string scene = "spot", modeArg, bsdfArg, colorArg, heatArg, outputArg = "test.ppm", lscaleArg;
   i32 w = 256, h = 256, sppArg = 0;
   f32 sigmaArg = 0.0f, yawArg = 0.0f, pitchArg = 0.0f;
   bool noMedia = false, noEnv = false;
@@ -71,6 +72,7 @@ int main(int argc, char** argv) {
       else if (a == "--sigma")   sigmaArg = std::atof(need(i, "--sigma").c_str());
       else if (a == "--color")   colorArg = need(i, "--color");
       else if (a == "--heat")    heatArg = need(i, "--heat");
+      else if (a == "--lscale")  lscaleArg = need(i, "--lscale");
       else if (a == "--output")  outputArg = need(i, "--output");
       else if (a == "--yaw")     yawArg = std::atof(need(i, "--yaw").c_str());
       else if (a == "--pitch")   pitchArg = std::atof(need(i, "--pitch").c_str());
@@ -94,18 +96,23 @@ int main(int argc, char** argv) {
     // extra args are ignored for positional brevity (use --output for the path)
   }
 
-  // 1. host staging
+  // 1. host staging. sigma must be known at build time (it sizes the medium
+  //    bound margin AND the voxel narrow band), so fold the CLI override in here.
+  const f32 meshSigma  = (sigmaArg > 0.0f) ? sigmaArg : 1.0f;
+  const f32 sphereSigma = (sigmaArg > 0.0f) ? sigmaArg : 5.0f;
+
   mps::host::SceneConfig cfg;
   if      (scene == "sphere")   cfg = mps::host::buildDefaultScene(w, h);
-  else if (scene == "spot")     cfg = mps::host::buildSpotGpScene(w, h);
-  else if (scene == "bunny")    cfg = mps::host::buildBunnyGpScene(w, h);
-  else if (scene == "dragon")   cfg = mps::host::buildDragonGpScene(w, h);
+  else if (scene == "spheregp") cfg = mps::host::buildGpSphereScene(w, h, sphereSigma);
+  else if (scene == "spot")     cfg = mps::host::buildSpotGpScene(w, h, meshSigma);
+  else if (scene == "bunny")    cfg = mps::host::buildBunnyGpScene(w, h, meshSigma);
+  else if (scene == "dragon")   cfg = mps::host::buildDragonGpScene(w, h, meshSigma);
   else if (scene == "dragonns") // dragon + non-stationary kernel field (Eq. 25 test)
     cfg = mps::host::buildMeshGpScene("/home/dudujerry/models/dragon.obj", w, h,
                                       500.0f, 150.0f, core::GPMode::SingleRealization,
-                                      1.0f, 1.0f, true, 256, true);
+                                      meshSigma, 1.0f, true, 256, true);
   else {
-    std::cerr << "unknown scene '" << scene << "' (use sphere|spot|bunny|dragon|dragonns)\n";
+    std::cerr << "unknown scene '" << scene << "' (use sphere|spheregp|spot|bunny|dragon|dragonns)\n";
     return 1;
   }
 
@@ -137,10 +144,21 @@ int main(int argc, char** argv) {
   }
 
   if (sppArg > 0) cfg.spp = sppArg;
-  if (sigmaArg > 0.0f) cfg.medium.sigma = sigmaArg;
+
+  // Per-axis length scale override (anisotropic kernel when components differ).
+  if (!lscaleArg.empty()) {
+    f32 lx = 0, ly = 0, lz = 0;
+    if (std::sscanf(lscaleArg.c_str(), "%f,%f,%f", &lx, &ly, &lz) != 3 ||
+        lx <= 0.0f || ly <= 0.0f || lz <= 0.0f) {
+      std::cerr << "bad --lscale '" << lscaleArg << "' (need Lx,Ly,Lz, each > 0)\n";
+      return 1;
+    }
+    cfg.medium.lengthScale = {lx, ly, lz};
+  }
 
   // GPIS texturing approach.
-  if (colorArg == "voxel")       cfg.medium.colorMethod = u16(core::ColorMethod::Voxel);
+  if (colorArg == "constant")    cfg.medium.colorMethod = u16(core::ColorMethod::Constant);
+  else if (colorArg == "voxel")  cfg.medium.colorMethod = u16(core::ColorMethod::Voxel);
   else if (colorArg == "surface") cfg.medium.colorMethod = u16(core::ColorMethod::Surface);
   else if (colorArg == "kernel")  cfg.medium.colorMethod = u16(core::ColorMethod::Kernel);
   else if (colorArg == "heatkernel") cfg.medium.colorMethod = u16(core::ColorMethod::HeatKernel);

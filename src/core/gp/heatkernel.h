@@ -98,8 +98,19 @@ namespace mps::core {
         acc   = acc + kernelColor[s] * alpha;
         accW += alpha;
       }
-      const f32 inv = 1.0f / mps::maxf(accW, 1.0f);
-      return (meanColor + acc * inv);
+      // Weighted average of the kernel residual colors. Normalizing by accW
+      // (instead of max(accW, 1)) keeps the color fully saturated even in
+      // sparsely-covered regions — chosen to make the heat-kernel scheme as
+      // vivid as the other three color schemes for the experiments.
+      const f32 inv = (accW > 1e-3f) ? (1.0f / accW) : 0.0f;
+      RGB_F32 c = meanColor + acc * inv;
+
+      // Saturation boost: overlapping heat kernels average toward gray; push the
+      // chroma back out so the heat-kernel scheme reads as vividly as the other
+      // three color schemes (experiment goal: maximally prominent colors).
+      const f32 lum = 0.3333333f * (c.r + c.g + c.b);
+      c = {lum + 2.6f * (c.r - lum), lum + 2.6f * (c.g - lum), lum + 2.6f * (c.b - lum)};
+      return c;
     }
   };
 

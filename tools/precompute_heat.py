@@ -105,13 +105,18 @@ def main():
     Phi = evecs.astype(np.float32)            # (N, K), columns = eigenvectors
     print(f"lambda[0..4] = {lam[:5]}")
 
-    # Place S heat sources on the surface.
+    # Place S heat sources on the surface. Golden-angle hue spacing + full
+    # saturation/value gives maximally distinct, vivid colors (the C++ renderer
+    # averages them, so we boost the residual to keep them from greying out).
     rng = np.random.default_rng(0)
     fids, barys = uniform_surface_samples(verts, faces, S)
-    colors = np.array([colorsys.hsv_to_rgb(rng.random(), 1.0, 1.0) for _ in range(S)], dtype=np.float32)
-    # threshold in [0.3, 0.99], sharpness in [10, 50]
-    tau = (0.3 + 0.69 * rng.random(S)).astype(np.float32)
-    sharp = (10.0 + 40.0 * rng.random(S)).astype(np.float32)
+    ga = np.pi * (3.0 - np.sqrt(5.0))
+    hues = (np.arange(S) * ga) % 1.0
+    colors = np.array([colorsys.hsv_to_rgb(h, 1.0, 1.0) for h in hues], dtype=np.float32)
+    # threshold in [0.05, 0.30] (wide kernels -> more surface covered by color),
+    # sharpness in [15, 50]
+    tau = (0.05 + 0.25 * rng.random(S)).astype(np.float32)
+    sharp = (15.0 + 35.0 * rng.random(S)).astype(np.float32)
 
     # Source eigenvector phi(s) via barycentric interpolation.
     phi_s = np.zeros((S, K), dtype=np.float32)
@@ -120,9 +125,11 @@ def main():
         b = barys[s]
         phi_s[s] = (Phi[f[0]] * b[0] + Phi[f[1]] * b[1] + Phi[f[2]] * b[2])
 
-    c_mean = np.mean(colors, axis=0).astype(np.float32)
-    residual = (colors - c_mean).astype(np.float32)   # store residuals (repo convention)
-    bh_sigma = 0.1                                   # biharmonic-distance Gaussian sigma
+    # Store ACTUAL colors (not residuals around a mean): averaging vivid colors
+    # stays vivid, whereas signed residuals partially cancel toward grey.
+    c_mean = np.array([0.0, 0.0, 0.0], dtype=np.float32)
+    residual = colors.astype(np.float32)
+    bh_sigma = 0.1                                   # biharmonic-distance Gaussian sigma (localized)
 
     with open(out, "wb") as fp:
         fp.write(struct.pack("<IIII", K, N, S, faces.shape[0]))

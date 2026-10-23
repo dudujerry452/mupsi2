@@ -22,6 +22,11 @@ namespace mps::host {
   // GPIS sphere scene (wrapper sphere + GP medium + one solid Lambertian sphere).
   SceneConfig buildDefaultScene(i32 w = 160, i32 h = 120);
 
+  // Minimal GPIS sphere scene: just the GP sphere mean + floor/wall + two area
+  // lights. No extra solid spheres — ideal for isolating the effect of sigma /
+  // kernel anisotropy on the GP surface shape.
+  SceneConfig buildGpSphereScene(i32 w = 256, i32 h = 256, f32 sigma = 5.0f);
+
   // Generic: wrap any OBJ in a GP implicit surface. The mesh is auto-fit into a
   // bounding sphere of `targetRadius` centered at (0,0,-dist); camera looks
   // straight down -z from the origin. When useVoxel is true the mesh SDF is
@@ -33,9 +38,10 @@ namespace mps::host {
                                bool useVoxel = true, u32 voxelRes = 256,
                                bool nonStationary = false);
 
-  // Convenience scenes (paths under ~/models).
-  SceneConfig buildSpotGpScene (i32 w = 256, i32 h = 256);
-  SceneConfig buildBunnyGpScene(i32 w = 512, i32 h = 512);
-  SceneConfig buildDragonGpScene(i32 w = 512, i32 h = 512);
+  // Convenience scenes (paths under ~/models). sigma flows into the medium bound
+  // margin and the voxel narrow-band width, so it must be set at build time.
+  SceneConfig buildSpotGpScene (i32 w = 256, i32 h = 256, f32 sigma = 1.0f);
+  SceneConfig buildBunnyGpScene(i32 w = 512, i32 h = 512, f32 sigma = 1.0f);
+  SceneConfig buildDragonGpScene(i32 w = 512, i32 h = 512, f32 sigma = 1.0f);
 
 }
