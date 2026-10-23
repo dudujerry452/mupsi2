@@ -39,7 +39,8 @@ static void printUsage() {
     "  sigma     GP noise amplitude override\n"
     "  color     constant | voxel | surface | kernel | heatkernel   (texturing)\n"
     "  lscale    per-axis length scale Lx,Ly,Lz (comma-separated; unequal => anisotropic)\n"
-    "  sigmafield x|y|z   ramp sigma monotonically along one axis (0.15x -> 2.5x)\n"
+    "  sigmafield x|y|z   ramp sigma monotonically along one axis (bottom -> top)\n"
+    "  sigmarange min,max sigma at the two ends of the ramp (default 0.3,6.0)\n"
     "  margin  mx,my,mz   medium AABB margin as multiples of sigma (default 3,5,3)\n"
     "  yaw/pitch orbit the camera AROUND the object (deg); 0/0 = default front view\n"
     "  heat      path to a precomputed HKTEx .bin (tools/precompute_heat.py)\n"
@@ -51,9 +52,10 @@ int main(int argc, char** argv) {
   mplog("mupsi2 renderer starting");
 
   // ——— CLI parsing (positional for brevity, or --name value) ———
-  std::string scene = "spot", modeArg, bsdfArg, colorArg, heatArg, outputArg = "test.ppm", lscaleArg, sigmaFieldArg, marginArg;
+  std::string scene = "spot", modeArg, bsdfArg, colorArg, heatArg, outputArg = "test.ppm", lscaleArg, sigmaFieldArg, marginArg, sigmaRangeArg;
   i32 w = 256, h = 256, sppArg = 0, sigmaFieldAxis = -1;
   f32 sigmaArg = 0.0f, yawArg = 0.0f, pitchArg = 0.0f;
+  f32 sigmaMin = 0.3f, sigmaMax = 6.0f;   // sigma-field ramp range
   vec3f marginScale{3.0f, 5.0f, 3.0f};   // AABB margin (multiples of sigma)
   bool noMedia = false, noEnv = false;
 
@@ -78,6 +80,7 @@ int main(int argc, char** argv) {
       else if (a == "--heat")    heatArg = need(i, "--heat");
       else if (a == "--lscale")  lscaleArg = need(i, "--lscale");
       else if (a == "--sigmafield") sigmaFieldArg = need(i, "--sigmafield");
+      else if (a == "--sigmarange") sigmaRangeArg = need(i, "--sigmarange");
       else if (a == "--margin")   marginArg = need(i, "--margin");
       else if (a == "--output")  outputArg = need(i, "--output");
       else if (a == "--yaw")     yawArg = std::atof(need(i, "--yaw").c_str());
@@ -100,6 +103,15 @@ int main(int argc, char** argv) {
     colorArg = (argc > 8) ? argv[8] : "";
     heatArg  = (argc > 9) ? argv[9] : "";
     // extra args are ignored for positional brevity (use --output for the path)
+  }
+
+  // Sigma-field ramp range (absolute sigma at the two ends).
+  if (!sigmaRangeArg.empty()) {
+    if (std::sscanf(sigmaRangeArg.c_str(), "%f,%f", &sigmaMin, &sigmaMax) != 2 ||
+        sigmaMin <= 0.0f || sigmaMax <= sigmaMin) {
+      std::cerr << "bad --sigmarange '" << sigmaRangeArg << "' (need min,max with 0 < min < max)\n";
+      return 1;
+    }
   }
 
   // Medium AABB margin (multiples of sigma), per-axis.
@@ -129,13 +141,14 @@ int main(int argc, char** argv) {
   mps::host::SceneConfig cfg;
   if      (scene == "sphere")   cfg = mps::host::buildDefaultScene(w, h);
   else if (scene == "spheregp") cfg = mps::host::buildGpSphereScene(w, h, sphereSigma);
-  else if (scene == "spot")     cfg = mps::host::buildSpotGpScene(w, h, meshSigma, sigmaFieldAxis, marginScale);
-  else if (scene == "bunny")    cfg = mps::host::buildBunnyGpScene(w, h, meshSigma, sigmaFieldAxis, marginScale);
-  else if (scene == "dragon")   cfg = mps::host::buildDragonGpScene(w, h, meshSigma, sigmaFieldAxis, marginScale);
+  else if (scene == "spot")     cfg = mps::host::buildSpotGpScene(w, h, meshSigma, sigmaFieldAxis, sigmaMin, sigmaMax, marginScale);
+  else if (scene == "bunny")    cfg = mps::host::buildBunnyGpScene(w, h, meshSigma, sigmaFieldAxis, sigmaMin, sigmaMax, marginScale);
+  else if (scene == "dragon")   cfg = mps::host::buildDragonGpScene(w, h, meshSigma, sigmaFieldAxis, sigmaMin, sigmaMax, marginScale);
   else if (scene == "dragonns") // dragon + non-stationary kernel field (Eq. 25 test)
     cfg = mps::host::buildMeshGpScene("/home/dudujerry/models/dragon.obj", w, h,
                                       500.0f, 150.0f, core::GPMode::SingleRealization,
-                                      meshSigma, 1.0f, true, 256, true, sigmaFieldAxis, marginScale);
+                                      meshSigma, 1.0f, true, 256, true, sigmaFieldAxis,
+                                      sigmaMin, sigmaMax, marginScale);
   else {
     std::cerr << "unknown scene '" << scene << "' (use sphere|spheregp|spot|bunny|dragon|dragonns)\n";
     return 1;

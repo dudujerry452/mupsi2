@@ -63,12 +63,13 @@ namespace mps::host {
             baseLength * 0.5f, baseLength * 2.0f);
     }
 
-    // Non-stationary SIGMA field: σ ramps monotonically and dramatically along one
-    // world axis (0=x, 1=y, 2=z), from 0.15×baseSigma to 2.5×baseSigma. This bakes a
-    // single render where one end of the object is crisp and the other is fuzzy —
-    // the point of "大幅变动 σ 在构建 σ 场时就要沿轴单调变化".
+    // Non-stationary SIGMA field: σ ramps monotonically along one world axis
+    // (0=x, 1=y, 2=z) from sigmaMin (at the MESH bbox min along the axis) to
+    // sigmaMax (at the MESH bbox max). The ramp is normalized by the mesh's own
+    // extent along that axis — NOT the AABB — so the bottom of the model gets
+    // sigmaMin and the top gets sigmaMax.
     void buildSigmaRampField(SceneConfig& cfg, const core::AABB& bounds, u32 res,
-                             f32 baseSigma, f32 baseLength, i32 axis) {
+                             f32 sigmaMin, f32 sigmaMax, f32 baseLength, i32 axis) {
       const vec3f diag = bounds.diagonal();
       const f32 maxExtent = mps::maxf(diag.x, mps::maxf(diag.y, diag.z));
       const f32 cellSize = (res > 0) ? maxExtent / f32(res) : 1.0f;
@@ -88,7 +89,7 @@ namespace mps::host {
             const vec3f p = mn + vec3f{f32(i), f32(j), f32(k)} * cellSize;
             const f32 coord = (axis == 0 ? p.x : axis == 1 ? p.y : p.z);
             const f32 t = mps::clampf((coord - mnCoord) / span, 0.0f, 1.0f);
-            const f32 sig = baseSigma * (0.15f + 2.5f * t);
+            const f32 sig = sigmaMin + (sigmaMax - sigmaMin) * t;
             const size_t idx = size_t(i) + res * (size_t(j) + res * size_t(k));
             cfg.host.kernelSigma[idx]  = sig;
             cfg.host.kernelLength[idx] = baseLength;
@@ -97,8 +98,8 @@ namespace mps::host {
       cfg.medium.kernelField.origin   = mn;
       cfg.medium.kernelField.cellSize = cellSize;
       cfg.medium.kernelField.res      = res;
-      mplog("buildSigmaRampField: axis={} sigma in [{:.2f}, {:.2f}]", axisName,
-            baseSigma * 0.15f, baseSigma * 2.5f);
+      mplog("buildSigmaRampField: axis={} sigma in [{:.2f}, {:.2f}] over mesh bbox",
+            axisName, sigmaMin, sigmaMax);
     }
 
     // Bake the analytic 3D color field into a dense RGB voxel grid (approach 1).
@@ -225,7 +226,8 @@ namespace mps::host {
   SceneConfig buildMeshGpScene(const std::string& objPath, i32 w, i32 h,
                                f32 dist, f32 targetRadius, core::GPMode mode,
                                f32 sigma, f32 kernelRadius, bool useVoxel, u32 voxelRes,
-                               bool nonStationary, i32 sigmaFieldAxis, vec3f marginScale) {
+                               bool nonStationary, i32 sigmaFieldAxis, f32 sigmaMin, f32 sigmaMax,
+                               vec3f marginScale) {
     SceneConfig cfg;
 
     cfg.settings.maxBounce = 10;
@@ -279,9 +281,9 @@ namespace mps::host {
     m.gpMode       = mode;
     cfg.hasMedium  = true;
 
-    // With a sigma ramp the field peaks at 2.5× the base sigma; the AABB margin
-    // and the voxel narrow band must be sized for that peak (not the base).
-    const f32 maxSigma = (sigmaFieldAxis >= 0) ? sigma * 2.5f : sigma;
+    // With a sigma ramp the AABB margin and voxel narrow band must be sized for
+    // the field's PEAK (sigmaMax), not the uniform base sigma.
+    const f32 maxSigma = (sigmaFieldAxis >= 0) ? sigmaMax : sigma;
 
     // AABB medium bound: mesh bbox + a few σ of GP noise, with the bottom face
     // exactly on the floor (so the medium never crosses the floor plane — no
@@ -345,11 +347,11 @@ namespace mps::host {
     }
 
     if (sigmaFieldAxis >= 0) {
-      // Spatially-varying SIGMA ramp along one axis (single render: one end crisp,
-      // the other fuzzy). Length scale stays constant.
+      // Spatially-varying SIGMA ramp along one axis over the MESH bbox (bottom ->
+      // top), sigmaMin -> sigmaMax. Length scale stays constant.
       core::AABB worldBox4 = core::AABB::empty();
       for (const vec3f& v : worldVerts) worldBox4.extend(v);
-      buildSigmaRampField(cfg, worldBox4, 64, sigma, kernelRadius, sigmaFieldAxis);
+      buildSigmaRampField(cfg, worldBox4, 64, sigmaMin, sigmaMax, kernelRadius, sigmaFieldAxis);
     }
 
     // Bake the dense RGB color grid (GPIS texturing approach 1), cheap at res 64.
@@ -377,22 +379,22 @@ namespace mps::host {
     return cfg;
   }
 
-  SceneConfig buildSpotGpScene(i32 w, i32 h, f32 sigma, i32 sigmaFieldAxis, vec3f marginScale) {
+  SceneConfig buildSpotGpScene(i32 w, i32 h, f32 sigma, i32 sigmaFieldAxis, f32 sigmaMin, f32 sigmaMax, vec3f marginScale) {
     return buildMeshGpScene("/home/dudujerry/models/spot/spot_triangulated_good.obj",
                             w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, sigma, 1.0f,
-                            true, 256, false, sigmaFieldAxis, marginScale);
+                            true, 256, false, sigmaFieldAxis, sigmaMin, sigmaMax, marginScale);
   }
 
-  SceneConfig buildBunnyGpScene(i32 w, i32 h, f32 sigma, i32 sigmaFieldAxis, vec3f marginScale) {
+  SceneConfig buildBunnyGpScene(i32 w, i32 h, f32 sigma, i32 sigmaFieldAxis, f32 sigmaMin, f32 sigmaMax, vec3f marginScale) {
     return buildMeshGpScene("/home/dudujerry/models/bunny/bunny.obj",
                             w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, sigma, 1.0f,
-                            true, 256, false, sigmaFieldAxis, marginScale);
+                            true, 256, false, sigmaFieldAxis, sigmaMin, sigmaMax, marginScale);
   }
 
-  SceneConfig buildDragonGpScene(i32 w, i32 h, f32 sigma, i32 sigmaFieldAxis, vec3f marginScale) {
+  SceneConfig buildDragonGpScene(i32 w, i32 h, f32 sigma, i32 sigmaFieldAxis, f32 sigmaMin, f32 sigmaMax, vec3f marginScale) {
     return buildMeshGpScene("/home/dudujerry/models/dragon.obj",
                             w, h, 500.0f, 150.0f, core::GPMode::SingleRealization, sigma, 1.0f,
-                            true, 256, false, sigmaFieldAxis, marginScale);
+                            true, 256, false, sigmaFieldAxis, sigmaMin, sigmaMax, marginScale);
   }
 
 }

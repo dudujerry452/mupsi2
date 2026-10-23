@@ -37,15 +37,19 @@ namespace mps::host {
                                f32 sigma = 1.0f, f32 kernelRadius = 1.0f,
                                bool useVoxel = true, u32 voxelRes = 256,
                                bool nonStationary = false, i32 sigmaFieldAxis = -1,
+                               f32 sigmaMin = 0.3f, f32 sigmaMax = 6.0f,
                                vec3f marginScale = {3.0f, 5.0f, 3.0f});
 
   // Convenience scenes (paths under ~/models). sigma flows into the medium bound
   // margin and the voxel narrow-band width, so it must be set at build time.
   SceneConfig buildSpotGpScene (i32 w = 256, i32 h = 256, f32 sigma = 1.0f, i32 sigmaFieldAxis = -1,
+                                 f32 sigmaMin = 0.3f, f32 sigmaMax = 6.0f,
                                  vec3f marginScale = {3.0f, 5.0f, 3.0f});
   SceneConfig buildBunnyGpScene(i32 w = 512, i32 h = 512, f32 sigma = 1.0f, i32 sigmaFieldAxis = -1,
+                                 f32 sigmaMin = 0.3f, f32 sigmaMax = 6.0f,
                                  vec3f marginScale = {3.0f, 5.0f, 3.0f});
   SceneConfig buildDragonGpScene(i32 w = 512, i32 h = 512, f32 sigma = 1.0f, i32 sigmaFieldAxis = -1,
+                                 f32 sigmaMin = 0.3f, f32 sigmaMax = 6.0f,
                                  vec3f marginScale = {3.0f, 5.0f, 3.0f});
 
 }
