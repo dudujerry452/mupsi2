@@ -2,10 +2,10 @@
 #include <vector>
 
 #include "core/basic/core.h"
+#include "core/scene/scene.h"
+#include "core/tracer/trace.h"
 #include "kernels/entrance/dispatch.h"
 
-#include "core/utils/log.h"
-#include "core/primitive/primitive.h"
 
 #include "host/ppm_util.h"
 
@@ -17,7 +17,10 @@ constexpr mps::Backend ACTIVE_BACKEND = mps::Backend::CPU;
 
 int main() {
 
-    mps::kernels::Entrance<ACTIVE_BACKEND>::run(); 
+    mps::core::RenderContext ctx; 
+    ctx.scene = mps::core::transform(mps::core::buildScene_Spot()); 
+
+    mps::kernels::Entrance<ACTIVE_BACKEND>::run(ctx); 
 
 
     

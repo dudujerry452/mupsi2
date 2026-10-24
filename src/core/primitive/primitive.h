@@ -1,8 +1,7 @@
 #pragma once 
 
 #include "core/basic/core.h"
-#include "core/utils/panic.h"
-
+#include <string>
 
 namespace mps::core {
 
@@ -25,9 +24,14 @@ namespace mps::core {
     f32 radius; 
   }; 
 
+  MPHD Sphere buildSphere(vec3f pos, f32 r);
+
   struct Mesh {
     PrimitiveInfo info; 
-  
-  }; 
+    vec3f* vertices; 
+    u32* indexes; 
+  };
+
+  MPH Mesh buildMesh(std::string path); 
 
 }

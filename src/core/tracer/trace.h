@@ -6,6 +6,17 @@
 
 namespace mps::core {
 
-  MPHD RGB_F32 trace(const Ray ray, const SceneDevice scene); 
+  struct RenderSettings {
+    u32 max_bounce; 
+  }; 
+
+  struct RenderContext {
+    RenderSettings settings; 
+    SceneDevice scene; 
+  }; 
+
+
+
+  MPHD RGB_F32 trace(const Ray ray, const RenderContext& ctx); 
 
 }

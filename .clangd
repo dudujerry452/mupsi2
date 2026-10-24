@@ -1,0 +1,35 @@
+# 全局:所有文件补 -std=c++20(nvcc 驱动会丢掉它)+ -I src。
+# --cuda-gpu-arch 给 .cu 文件用(对纯 C++ 文件无害)。
+CompileFlags:
+  Add:
+    - -std=c++20
+    - -I/home/dudujerry/mupsi2/src
+    - --cuda-gpu-arch=sm_89
+  Remove:
+    - -forward-unknown-to-host-compiler
+    - --options-file
+    - -arch=*
+    - -Xcompiler=*
+    - -rdc=true
+
+# clang 21 + libstdc++ 15 在 -x c++-header(头文件单独检查)时会对
+# std::vector<用户结构体> 误报 _Tp_alloc_type / pointer 不存在(g++ 实编无此问题)。
+# 该诊断是假阳性,直接压制。
+Diagnostics:
+  Suppress:
+    - typename_nested_not_found
+
+---
+# core/*.cpp 在真实构建里被 nvcc -x cu 编(有 __CUDACC__),但 clang 的 device 遍
+# 会对 host-only 的 std::vector/std::string_view 报假阳性。所以这里只「定义 __CUDACC__
+# + 中和 nvcc 关键字」,不真正进 -x cuda(即给 core/*.cpp 显示 CPU 视图,无 device 遍)。
+# .cu 文件 clangd 靠扩展名自动识别为 CUDA(真正的 -x cuda),不受这里影响。
+If:
+  PathMatch: src/core/.*\.cpp$
+CompileFlags:
+  Add:
+    - -D__CUDACC__
+    - -D__host__=
+    - -D__device__=
+    - -D__global__=
+    - -D__forceinline__=inline
