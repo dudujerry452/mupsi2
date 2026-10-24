@@ -31,14 +31,4 @@ namespace mps::core {
     u16 lightId;  
   }; 
 
-  template<PrimitiveType T> 
-  struct Intersect; 
-
-  template<> struct Intersect<PrimitiveType::Sphere> {
-    MPHD static HitRecord run(const Ray& ray, const Primitive<PrimitiveType::Sphere>& primitive); 
-  }; 
-
-
-
-
 }

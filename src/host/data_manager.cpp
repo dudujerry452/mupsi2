@@ -9,41 +9,5 @@
 
 namespace mps::host {
 
-  MPH std::tuple<u32, u32*, u32*, void*> flatten_primitive(const std::vector<void*>& prims) {
-    if(prims.empty()) return {0, nullptr, nullptr, nullptr}; 
-    
-    u32 num = prims.size(); 
-    u32* starts = new u32[num];  starts[0] = 0; 
-    std::vector<u32> lens(num, 0); 
-
-    i32 i = 0, cnt = 0; 
-    for(auto p: prims) {
-      auto* ptr = reinterpret_cast<core::PrimitiveInfo*>(p);
-      u32 siz = core::alignedSizeOfPrimitive(ptr->type); 
-      starts[i] = cnt; 
-      cnt += siz; 
-      lens[i] = siz; 
-    }
-
-    char* flat = new char[cnt]; 
-    for(u32 i = 0; i < num; i ++) {
-      memcpy(flat+starts[i], prims[i], lens[i]); 
-    }
-    return {num, starts, lens.data(), static_cast<void*>(flat)};  
-  }
-
-  MPH core::SceneDevice SceneHost2Device(const core::SceneHost& scene) {
-    core::SceneDevice dev; 
-
-
-    // primitive section
-    auto [aa, bb, cc, dd] = flatten_primitive(scene.primitives); 
-    dev.num = aa; 
-    dev.starts = bb; 
-    dev.lens = cc; 
-    dev.primitives = dd; 
-
-    return dev; 
-  }
 
 }

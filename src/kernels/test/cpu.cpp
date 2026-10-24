@@ -7,7 +7,7 @@ namespace mps::kernels {
   void test_func<Backend::CPU>::run(i32 n, u32* out) { 
     #pragma omp parallel for 
     for(i32 i = 0; i < n; i ++) {
-      out[i] = core::xxhash(i); 
+      out[i] = core::make_seed_n(i); 
     }
   }
 

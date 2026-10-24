@@ -15,7 +15,7 @@ namespace mps::kernels {
   MPG void g_calc_test(i32 n, u32* out) {
     i32 idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < n)
-      out[idx] = core::xxhash(idx);
+      out[idx] = core::make_seed_f(idx);
   }
 
   void test_func<Backend::CUDA>::run(i32 n, u32* out) {

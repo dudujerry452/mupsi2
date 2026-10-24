@@ -4,9 +4,9 @@
 namespace mps::core {
 
 
-  MPHD HitRecord Intersect<PrimitiveType::Sphere>::run(
+  MPHD HitRecord intersect(
     const Ray& ray, 
-    const Primitive<PrimitiveType::Sphere>& primitive
+    const Sphere& primitive 
   ) {
 
     HitRecord hr; 
