@@ -13,8 +13,8 @@ namespace mps::core {
   struct RenderContext {
     RenderSettings settings; 
     SceneDevice scene; 
+    FrameBuffer<RGB_F32>* framebuffer; 
   }; 
-
 
 
   MPHD RGB_F32 trace(const Ray ray, const RenderContext& ctx); 

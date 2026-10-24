@@ -31,4 +31,6 @@ namespace mps::core {
     u16 lightId;  
   }; 
 
+  MPHD HitRecord intersect( const Ray& ray, const Sphere& primitive); 
+
 }

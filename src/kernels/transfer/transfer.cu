@@ -24,4 +24,10 @@ namespace mps::kernels {
     n = 0; 
   
   }
+
+  MPH void destory(const core::SceneDevice& dev) {
+    cudaCheck(cudaFree(dev.spheres)); 
+  }
+
+  
 }

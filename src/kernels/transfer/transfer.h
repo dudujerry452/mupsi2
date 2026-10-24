@@ -6,6 +6,7 @@
 namespace mps::kernels {
 
   MPH void upload(core::SceneDevice& dev_host);
+  MPH void destory(const core::SceneDevice& dev); 
 
 
 }
