@@ -9,7 +9,7 @@ namespace mps::core {
     const Sphere& primitive 
   ) {
 
-    HitRecord hr; 
+    HitRecord hr{}; 
     hr.hit = false;
 
     const auto C = primitive.info.wpos; 

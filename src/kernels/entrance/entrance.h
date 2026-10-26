@@ -1,6 +1,7 @@
 #pragma once 
 
 #include "core/basic/core.h"
+#include "core/basic/types.h"
 #include "core/tracer/trace.h"
 
 namespace mps::kernels {
@@ -10,10 +11,10 @@ namespace mps::kernels {
   }; 
 
   template<> struct Entrance<Backend::CUDA> {
-    static void run(const core::RenderContext& ctx); 
+    static FrameBuffer<RGB_F32> run(const core::RenderContext& ctx); 
   }; 
 
   template<> struct Entrance<Backend::CPU> {
-    static void run(const core::RenderContext& ctx); 
+    static FrameBuffer<RGB_F32> run(const core::RenderContext& ctx); 
   };
 }

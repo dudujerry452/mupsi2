@@ -6,9 +6,9 @@ namespace mps::core {
   MPH core::SceneDevice transform(const core::SceneHost& host) {
     core::SceneDevice dev{};
 
-    u32 cnt = host.spheres.size(); 
-    if(cnt != 0) {
-      dev.spheres = new core::Sphere[cnt]();
+    dev.num_spheres = host.spheres.size(); 
+    if(dev.num_spheres != 0) {
+      dev.spheres = new core::Sphere[dev.num_spheres]();
       std::copy(host.spheres.begin(), host.spheres.end(), dev.spheres);
     }
     

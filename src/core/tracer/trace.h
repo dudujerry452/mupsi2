@@ -2,6 +2,7 @@
 
 #include "core/basic/types.h"
 #include "core/scene/scene.h"
+#include "core/scene/camera.h"
 #include "core/tracer/intersect.h"
 
 namespace mps::core {
@@ -13,10 +14,11 @@ namespace mps::core {
   struct RenderContext {
     RenderSettings settings; 
     SceneDevice scene; 
-    FrameBuffer<RGB_F32>* framebuffer; 
+    Camera camera; 
+    FrameBuffer<RGB_F32> framebuffer; 
   }; 
 
 
-  MPHD RGB_F32 trace(const Ray ray, const RenderContext& ctx); 
+  MPHD RGB_F32 trace(const Ray& ray, const RenderContext& ctx); 
 
 }

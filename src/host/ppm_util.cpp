@@ -1,4 +1,5 @@
 #include "host/ppm_util.h"
+#include "core/basic/types.h"
 #include "core/math/math_util.h"
 
 #include <iostream> 
@@ -6,7 +7,7 @@
 
 namespace mps::host {
 
-  MPH MPINL RGB_8Bit radiance_to_8bit(RGB_F32 rgb) {
+  MPH MPINL RGB_8Bit radianceTo8bit(RGB_F32 rgb) {
           auto encode = [](f32 x) -> byte {
               x = x > 0.0f ? x : 0.0f; // clamp
               x = x / (1.0f + x);
@@ -21,17 +22,17 @@ namespace mps::host {
           };
       }
 
-    MPH void framebuffer_radiance_to_8bit(
-        const FrameBuffer<RGB_F32>& fb,
-        FrameBuffer<RGB_8Bit>& ret
+    MPH void radianceTo8bit(
+        FrameBuffer<RGB_8Bit>& out,
+        const FrameBuffer<RGB_F32>& fb
     ) {
         for (i32 i = 0; i < fb.width * fb.height; ++i) {
-            ret.pixels[i] = radiance_to_8bit(fb.pixels[i]);
+            out.pixels[i] = radianceTo8bit(fb.pixels[i]);
         }
     }
 
 
-  MPH void save_ppm(const std::string& filename, const FrameBuffer<RGB_8Bit>& fb) {
+  MPH void savePPM(const std::string& filename, const FrameBuffer<RGB_8Bit>& fb) {
 
     std::ofstream ofs(filename, std::ios::binary); 
 

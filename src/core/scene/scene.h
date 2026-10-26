@@ -19,9 +19,6 @@ namespace mps::core {
     Sphere* spheres; 
   }; 
 
-  MPH core::SceneDevice transform(const core::SceneHost& host); 
-
-
   struct SceneHost {
 
     std::vector<Mesh> meshes; 
@@ -34,5 +31,6 @@ namespace mps::core {
     MPH void AddSphere(Sphere&& sphere); 
   }; 
 
+  MPH core::SceneDevice transform(const core::SceneHost& host); 
   MPH SceneHost buildScene_Spot(); 
 }

@@ -18,13 +18,13 @@ namespace mps::host {
             fb.pixel(i, j) = {static_cast<mps::byte>(i), static_cast<mps::byte>(j), 100}; 
         }
     }
-    mps::host::save_ppm("test.ppm", fb);
+    mps::host::savePPM("test.ppm", fb);
     delete[] fb.pixels;
   */
-  MPH MPINL RGB_8Bit radiance_to_8bit(RGB_8Bit rgb); 
+  MPH MPINL RGB_8Bit radianceTo8bit(RGB_8Bit rgb); 
 
-  MPH void framebuffer_radiance_to_8bit(const FrameBuffer<RGB_8Bit>& fb, FrameBuffer<RGB_F32>& ret); 
+  MPH void radianceTo8bit(FrameBuffer<RGB_8Bit>& out, const FrameBuffer<RGB_F32>& fb); 
 
-  MPH void save_ppm(const std::string& filename, const FrameBuffer<RGB_8Bit>& fb); 
+  MPH void savePPM(const std::string& filename, const FrameBuffer<RGB_8Bit>& fb); 
 
 }
