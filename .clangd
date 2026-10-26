@@ -21,15 +21,13 @@ Diagnostics:
 
 ---
 # core/*.cpp 在真实构建里被 nvcc -x cu 编(有 __CUDACC__),但 clang 的 device 遍
-# 会对 host-only 的 std::vector/std::string_view 报假阳性。所以这里只「定义 __CUDACC__
-# + 中和 nvcc 关键字」,不真正进 -x cuda(即给 core/*.cpp 显示 CPU 视图,无 device 遍)。
+# 会对 host-only 的 std::vector/std::string_view 报假阳性。所以这里不给 core/*.cpp
+# 定义 __CUDACC__:attr.h / cuda_util.h 走 #else 分支(纯 CPU 视图),不 include cuda_runtime.h,
+# 从而避开 clang21 与 CUDA12.9 头文件的版本检查 / constexpr abs 重定义冲突。
 # .cu 文件 clangd 靠扩展名自动识别为 CUDA(真正的 -x cuda),不受这里影响。
 If:
   PathMatch: src/core/.*\.cpp$
 CompileFlags:
   Add:
-    - -D__CUDACC__
-    - -D__host__=
-    - -D__device__=
-    - -D__global__=
-    - -D__forceinline__=inline
+    - -x
+    - c++

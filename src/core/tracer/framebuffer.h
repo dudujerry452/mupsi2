@@ -23,7 +23,7 @@ namespace mps {
     }
     MPH void destory() {
       ::mps::destory(pixels); 
-      pixels = nullptr; 
+      *this = FrameBuffer<PixelType>{}; 
     }
     MPH void download() {
       pixels = ::mps::download(pixels, pixelnum());
@@ -31,7 +31,8 @@ namespace mps {
 
     // ---- cpu ----
     MPH void free() {
-      if(pixels != nullptr) delete pixels; 
+      if(pixels != nullptr) delete[] pixels; 
+      *this = FrameBuffer<PixelType>{}; 
     }
 
   }; 
