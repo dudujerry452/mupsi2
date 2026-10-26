@@ -39,15 +39,6 @@ namespace mps {
     f32 r,g,b; 
   }; 
 
-  template<typename PixelType> 
-  struct FrameBuffer {
-    i32 width, height; 
-    PixelType* pixels; 
-
-    MPHD MPINL PixelType& pixel(i32 x, i32 y) const {return pixels[y * width + x]; }
-    MPHD MPINL u32 pixelnum() const {return width*height; }
-    MPHD MPINL u32 bytesize() const {return width*height*sizeof(PixelType); }  
-  }; 
 
 
 }

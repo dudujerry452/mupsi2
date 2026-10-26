@@ -8,7 +8,10 @@ namespace mps::core {
 
 
 
-  struct SceneDevice {
+ 
+  
+
+   struct SceneDevice {
     
     u32 num_vertices;
     u32 num_indexes;  
@@ -17,6 +20,14 @@ namespace mps::core {
 
     u32 num_spheres; 
     Sphere* spheres; 
+
+    // ---- cuda ----
+    // upload to device and rebind
+    MPH void upload(); 
+    MPH void destory();  
+
+    // ---- cpu ----
+    MPH void free(); 
   }; 
 
   struct SceneHost {
@@ -29,8 +40,10 @@ namespace mps::core {
     // std::vector<Medium> media;  
 
     MPH void AddSphere(Sphere&& sphere); 
+    MPH core::SceneDevice transform() const; 
   }; 
 
-  MPH core::SceneDevice transform(const core::SceneHost& host); 
   MPH SceneHost buildScene_Spot(); 
+
+  
 }

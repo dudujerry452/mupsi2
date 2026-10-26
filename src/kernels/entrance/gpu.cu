@@ -1,6 +1,5 @@
 #include "core/math/math_util.h"
 #include "kernels/entrance/entrance.h"
-#include "kernels/transfer/transfer.h"
 
 #include "core/primitive/primitive.h"
 #include "core/tracer/trace.h"
@@ -48,20 +47,23 @@ namespace mps::kernels {
 
     auto _ctx = ctx; 
 
-    _ctx.scene = uploadScene(_ctx.scene);
-    _ctx.framebuffer = uploadFrameBuffer(_ctx.framebuffer); 
+    _ctx.scene.upload(); 
+    _ctx.framebuffer.upload(); 
 
     dim3 blockdim(16, 16); 
-    dim3 griddim((_ctx.framebuffer.width + blockdim.x-1) / blockdim.x, 
-  (_ctx.framebuffer.height + blockdim.y-1) / blockdim.y); 
+    dim3 griddim(
+      (_ctx.framebuffer.width  + blockdim.x-1) / blockdim.x, 
+      (_ctx.framebuffer.height + blockdim.y-1) / blockdim.y
+    ); 
 
     trace<<<griddim, blockdim>>>(_ctx); 
 
     cudaCheckLast();
 
-    auto ret = downloadFrameBuffer(_ctx.framebuffer); 
-    destoryFrameBuffer(_ctx.framebuffer);
-    destoryScene(_ctx.scene);
+    auto ret = _ctx.framebuffer; 
+    ret.download();  
+    _ctx.framebuffer.destory(); 
+    _ctx.scene.destory(); 
     return ret;   
   }
 

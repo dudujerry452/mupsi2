@@ -5,6 +5,8 @@
 #include "core/scene/camera.h"
 #include "core/tracer/intersect.h"
 
+#include "core/tracer/framebuffer.h"
+
 namespace mps::core {
 
   struct RenderSettings {

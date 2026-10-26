@@ -1,17 +1,34 @@
 #include "core/scene/scene.h"
 #include "core/primitive/primitive.h"
 
+#include "core/utils/cuda_util.h"
+
 namespace mps::core {
 
-  MPH core::SceneDevice transform(const core::SceneHost& host) {
+  
+  MPH void SceneDevice::upload() {
+    auto dev = ::mps::upload(spheres, num_spheres);
+    spheres = dev;  
+  }
+  MPH void SceneDevice::destory() {
+    ::mps::destory(spheres); 
+    *this = SceneDevice{};
+  }
+
+
+  MPH void SceneDevice::free() {
+    if(spheres != nullptr) delete[] spheres; 
+    *this = SceneDevice{}; 
+  }
+
+  MPH SceneDevice SceneHost::transform() const {
     core::SceneDevice dev{};
 
-    dev.num_spheres = host.spheres.size(); 
+    dev.num_spheres = spheres.size(); 
     if(dev.num_spheres != 0) {
       dev.spheres = new core::Sphere[dev.num_spheres]();
-      std::copy(host.spheres.begin(), host.spheres.end(), dev.spheres);
+      std::copy(spheres.begin(), spheres.end(), dev.spheres);
     }
-    
     return dev; 
   }
 

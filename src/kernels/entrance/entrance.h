@@ -4,6 +4,8 @@
 #include "core/basic/types.h"
 #include "core/tracer/trace.h"
 
+#include "core/tracer/framebuffer.h"
+
 namespace mps::kernels {
 
   template<Backend B> struct Entrance {

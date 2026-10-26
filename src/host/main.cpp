@@ -20,7 +20,7 @@ constexpr mps::Backend ACTIVE_BACKEND = mps::Backend::CPU;
 int main() {
 
     mps::core::RenderContext ctx{}; 
-    ctx.scene = mps::core::transform(mps::core::buildScene_Spot()); 
+    ctx.scene = mps::core::buildScene_Spot().transform(); 
     ctx.camera.fov = 60.0f * mps::pi / 180.0f;  
     ctx.camera.znear = 1.0f; 
     ctx.camera.aspect = 2.0f; 
@@ -38,11 +38,11 @@ int main() {
 
     mps::host::radianceTo8bit(out, fb); 
     mps::host::savePPM("test.ppm", out); 
-    
-    delete[] fb.pixels; 
-    delete[] out.pixels; 
-    delete[] ctx.framebuffer.pixels; 
-    delete[] ctx.scene.spheres; 
+
+    out.free();
+    fb.free(); 
+    ctx.framebuffer.free(); 
+    ctx.scene.free(); 
     
     return 0;
 }

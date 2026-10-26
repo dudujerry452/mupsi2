@@ -3,6 +3,8 @@
 #include <string>
 #include "core/basic/types.h"
 
+#include "core/tracer/framebuffer.h"
+
 namespace mps::host {
 
 
