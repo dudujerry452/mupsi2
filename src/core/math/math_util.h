@@ -156,13 +156,15 @@ namespace mps {
     return {a.x*invnorm, a.y*invnorm, a.z*invnorm, a.w*invnorm};
   }
 
-  MPHD MPINL vec4f quat_init(const vec3f axis, const f32 theta) { const f32 ht = theta*0.5f; return { axis.x*ht, axis.y*ht, axis.z*ht,  mps::cosf(ht)}; }
+  // require axis is normalized
+  MPHD MPINL vec4f quat_init(const vec3f axis, const f32 theta) { 
+    const f32 ht = theta * 0.5f; 
+    const f32 hts = mps::sinf(ht); 
+    return { axis.x*hts, axis.y*hts, axis.z*hts,  mps::cosf(ht)}; 
+  }
+  // require q,v is unit normalized
   MPHD MPINL vec3f quat_rotate(const vec4f q, const vec3f v) {return {v + mps::cross(2.0f*q.u, mps::cross(q.u, v) + q.w*v)}; }
   MPHD MPINL vec3f quat_rotate_inv(const vec4f q, const vec3f v) {return {v - mps::cross(2.0f*q.u, -mps::cross(q.u, v) + q.w*v)}; }
-  MPHD MPINL vec4f quat_normalize(const vec4f a) {
-    const f32 invnorm2 = 1.0f / mps::norm2(a);
-    return {a.x*invnorm2, a.y*invnorm2, a.z*invnorm2, a.w*invnorm2};
-  }
   MPHD MPINL vec4f quat_mul(const vec4f l, const vec4f r) {
     return {
       l.w*r.x + l.x*r.w + l.y*r.z - l.z*r.y,
@@ -172,6 +174,63 @@ namespace mps {
     };
   }
   MPHD MPINL vec4f quat_conj(const vec4f a) {return {-a.x, -a.y, -a.z, a.w}; }
+  MPHD MPINL vec4f quat_inverse(const vec4f a) {
+    vec4f conj = quat_conj(a); 
+    const f32 invnorm2 = 1.0f / mps::norm2(a);
+    return {conj.x*invnorm2, conj.y*invnorm2, conj.z*invnorm2, conj.w*invnorm2};
+  }
+  MPHD MPINL vec4f quat_from_matrix(const vec3f right, const vec3f up, const vec3f forward) {
+      vec4f quat; 
+
+      f32 m00 = right.x, m01 = up.x, m02 = -forward.x;
+      f32 m10 = right.y, m11 = up.y, m12 = -forward.y;
+      f32 m20 = right.z, m21 = up.z, m22 = -forward.z;
+
+      f32 trace = m00 + m11 + m22;
+
+      if (trace > 0.0f) {
+          f32 s = 2.0f * mps::sqrtf(trace + 1.0f);
+          f32 s_inv = 1.0f / s;
+
+          quat = vec4f{
+              (m21 - m12) * s_inv,
+              (m02 - m20) * s_inv,
+              (m10 - m01) * s_inv,
+              0.25f * s
+          };
+      } else if (m00 > m11 && m00 > m22) {
+          f32 s = 2.0f * mps::sqrtf(1.0f + m00 - m11 - m22);
+          f32 s_inv = 1.0f / s;
+
+          quat = vec4f{
+              0.25f * s,
+              (m01 + m10) * s_inv,
+              (m02 + m20) * s_inv,
+              (m21 - m12) * s_inv
+          };
+      } else if (m11 > m22) {
+          f32 s = 2.0f * mps::sqrtf(1.0f + m11 - m00 - m22);
+          f32 s_inv = 1.0f / s;
+
+          quat = vec4f{
+              (m01 + m10) * s_inv,
+              0.25f * s,
+              (m12 + m21) * s_inv,
+              (m02 - m20) * s_inv
+          };
+      } else {
+          f32 s = 2.0f * mps::sqrtf(1.0f + m22 - m00 - m11);
+          f32 s_inv = 1.0f / s;
+
+          quat = vec4f{
+              (m02 + m20) * s_inv,
+              (m12 + m21) * s_inv,
+              0.25f * s,
+              (m10 - m01) * s_inv
+          };
+      }
+      return quat; 
+  }
 
   // ——— RGB_F32 ———
   MPHD MPINL RGB_F32& operator+=(RGB_F32& a, const RGB_F32 b) { a.r+=b.r; a.g+=b.g; a.b+=b.b; return a; }

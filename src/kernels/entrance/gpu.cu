@@ -25,14 +25,14 @@ namespace mps::kernels {
     u32 width = ctx.framebuffer.width; 
     u32 height = ctx.framebuffer.height; 
 
-    f32 x = ((f32)col + 0.5f) / width, y = ((f32)row+0.5f) / height;
+    f32 x = ((f32)col + 0.5f) / width, y = 1.0f - ((f32)row+0.5f) / height;
     
     f32 real_height = ctx.camera.znear * mps::tanf(ctx.camera.fov * 0.5) * 2; 
     f32 real_width = ctx.camera.aspect * real_height; 
 
     core::Ray ray{}; 
     ray.o = ctx.camera.wpos; 
-    ray.dir = vec3f{real_width * x - 0.5f * real_width, real_height * y - 0.5f * real_height, -1};
+    ray.dir = vec3f{real_width * x - 0.5f * real_width, real_height * y - 0.5f * real_height, -ctx.camera.znear};
     ray.dir = quat_rotate(ctx.camera.quat, ray.dir); 
     ray.dir = mps::normalize(ray.dir); 
 
