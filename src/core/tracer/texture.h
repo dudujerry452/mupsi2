@@ -8,7 +8,7 @@ namespace mps {
 
 
   template<typename PixelType> 
-  struct FrameBuffer {
+  struct Texture {
     i32 width, height; 
     PixelType* pixels; 
 
@@ -23,7 +23,7 @@ namespace mps {
     }
     MPH void destory() {
       ::mps::destory(pixels); 
-      *this = FrameBuffer<PixelType>{}; 
+      *this = Texture<PixelType>{}; 
     }
     MPH void download() {
       pixels = ::mps::download(pixels, pixelnum());
@@ -32,7 +32,7 @@ namespace mps {
     // ---- cpu ----
     MPH void free() {
       if(pixels != nullptr) delete[] pixels; 
-      *this = FrameBuffer<PixelType>{}; 
+      *this = Texture<PixelType>{}; 
     }
 
   }; 

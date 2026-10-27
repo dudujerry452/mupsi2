@@ -31,7 +31,7 @@ int main() {
 
     auto fb = mps::kernels::Entrance<ACTIVE_BACKEND>::run(ctx); 
     
-    mps::FrameBuffer<mps::RGB_8Bit> out; 
+    mps::Texture<mps::RGB_8Bit> out; 
     out.width = ctx.framebuffer.width; 
     out.height = ctx.framebuffer.height;  
     out.pixels = new mps::RGB_8Bit[out.pixelnum()]();  

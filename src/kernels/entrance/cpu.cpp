@@ -4,10 +4,10 @@
 
 namespace mps::kernels {
 
-  FrameBuffer<RGB_F32> Entrance<Backend::CPU>::run(const core::RenderContext& ctx) {
+  Texture<RGB_F32> Entrance<Backend::CPU>::run(const core::RenderContext& ctx) {
     mplog("Use Backend: CPU");
 
-    return FrameBuffer<RGB_F32>{};
+    return Texture<RGB_F32>{};
 
   }
 

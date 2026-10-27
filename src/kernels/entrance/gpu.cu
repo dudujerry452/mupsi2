@@ -42,7 +42,7 @@ namespace mps::kernels {
     ctx.framebuffer.pixel(col, row) = core::trace(ray, ctx); 
   }
 
-  FrameBuffer<RGB_F32> Entrance<Backend::CUDA>::run(const core::RenderContext& ctx) {
+  Texture<RGB_F32> Entrance<Backend::CUDA>::run(const core::RenderContext& ctx) {
     mplog("Use Backend: CUDA");
 
     auto _ctx = ctx; 

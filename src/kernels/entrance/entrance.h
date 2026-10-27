@@ -4,7 +4,7 @@
 #include "core/basic/types.h"
 #include "core/tracer/trace.h"
 
-#include "core/tracer/framebuffer.h"
+#include "core/tracer/texture.h"
 
 namespace mps::kernels {
 
@@ -13,10 +13,10 @@ namespace mps::kernels {
   }; 
 
   template<> struct Entrance<Backend::CUDA> {
-    static FrameBuffer<RGB_F32> run(const core::RenderContext& ctx); 
+    static Texture<RGB_F32> run(const core::RenderContext& ctx); 
   }; 
 
   template<> struct Entrance<Backend::CPU> {
-    static FrameBuffer<RGB_F32> run(const core::RenderContext& ctx); 
+    static Texture<RGB_F32> run(const core::RenderContext& ctx); 
   };
 }

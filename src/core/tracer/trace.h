@@ -5,7 +5,7 @@
 #include "core/scene/camera.h"
 #include "core/tracer/intersect.h"
 
-#include "core/tracer/framebuffer.h"
+#include "core/tracer/texture.h"
 
 namespace mps::core {
 
@@ -17,7 +17,7 @@ namespace mps::core {
     RenderSettings settings; 
     SceneDevice scene; 
     Camera camera; 
-    FrameBuffer<RGB_F32> framebuffer; 
+    Texture<RGB_F32> framebuffer; 
   }; 
 
 
