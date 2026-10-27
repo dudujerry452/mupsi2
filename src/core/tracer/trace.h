@@ -5,7 +5,7 @@
 #include "core/scene/camera.h"
 #include "core/tracer/intersect.h"
 
-#include "core/tracer/texture.h"
+#include "core/basic/texture.h"
 
 namespace mps::core {
 

@@ -3,7 +3,7 @@
 #include <string>
 #include "core/basic/types.h"
 
-#include "core/tracer/texture.h"
+#include "core/basic/texture.h"
 
 namespace mps::host {
   MPH MPINL RGB_8Bit radianceTo8bit(RGB_8Bit rgb); 

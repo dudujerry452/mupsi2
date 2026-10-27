@@ -41,23 +41,30 @@ namespace mps {
 #define mplogtag(tag, fmt, ...) \
     mps::_impl_log(tag, fmt, ##__VA_ARGS__)
 
-// lpanic(cond, fmt, ...):cond 为真时,记录一条 [FATAL] 日志并 abort。
-// 例:
-//   lpanic(ptr == nullptr, "指针为空");
-//   lpanic(i > 10, "i = {} 越界", i);
-#define lpanic(cond, fmt, ...) \
-    do { \
-        if (cond) { \
-            mps::_impl_log(CURRENT_FUNCTION, "[FATAL] " fmt, ##__VA_ARGS__); \
-            std::abort(); \
-        } \
-    } while(0)
 
 #else  // __CUDA_ARCH__:device 遍
 
-// 日志退化为空操作(设备端无 std::format/iostream);panic 仍保留 __trap。
 #define mplog(fmt, ...) ((void)0)
 #define mplogtag(tag, fmt, ...) ((void)0)
-#define lpanic(cond, fmt, ...) do { if (cond) { __trap(); } } while(0)
 
 #endif
+
+// panic
+#ifdef __CUDA_ARCH__
+    #define mppanic(fmt, ...) \
+        do { \
+            printf("[GPU FATAL] " fmt "\n", ##__VA_ARGS__); \
+            __trap(); \
+        } while(0)
+#else
+    #include <cstdlib>
+    #include <stdio.h>
+    #include <cstdio>
+    #define mppanic(fmt, ...) \
+        do { \
+            std::fprintf(stderr, "[CPU FATAL] " fmt "\n", ##__VA_ARGS__); \
+            std::abort(); \
+        } while(0)
+#endif
+
+

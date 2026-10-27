@@ -118,6 +118,8 @@ namespace mps {
   MPHD MPINL vec2f operator*(const vec2f a, const f32 b) { return {a.x*b, a.y*b}; }
   MPHD MPINL vec2f operator*(const f32 a, const vec2f b) { return b*a; }
   MPHD MPINL f32 dot(const vec2f l, const vec2f r) { return l.x*r.x + l.y*r.y; }
+  MPHD MPINL f32 norm2(const vec2f a) {return a.x*a.x + a.y*a.y; }
+  MPHD MPINL vec2f normalize(const vec2f a) {return a * mps::rsqrtf(norm2(a)); }
 
   // ——— vec3f ———
   MPHD MPINL vec3f operator+(const vec3f a, const vec3f b) {return {a.x+b.x, a.y+b.y, a.z+b.z}; }

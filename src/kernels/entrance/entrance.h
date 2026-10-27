@@ -4,7 +4,7 @@
 #include "core/basic/types.h"
 #include "core/tracer/trace.h"
 
-#include "core/tracer/texture.h"
+#include "core/basic/texture.h"
 
 namespace mps::kernels {
 
