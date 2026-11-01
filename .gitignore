@@ -19,3 +19,6 @@
 *.ppm
 
 /docs
+
+# clangd 索引缓存
+/.cache

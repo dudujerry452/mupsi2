@@ -90,8 +90,38 @@ else()
   endif()
 endif()
 
+# ——— 工具: mesh2gp 独立可执行文件 ———
+# 不进入 mupsi 主程序: mesh -> GPIS artifact (.gpibin) 的离线烘焙器。
+# 复用 mupsi_core / mupsi_header + host 的 obj_loader / voxel_builder，
+# 但 src/host/ 其余文件(main.cpp、scene_builder 等)不进这个 target。
+#
+# 参考分支上的方案变体只改 MESH2GP_SOURCES 里的实现文件，入口保持不动。
+set(MESH2GP_SOURCES
+  src/host/mesh2gp/main.cpp
+  src/host/mesh2gp/gpisfile.cpp
+  src/host/mesh2gp/generator.cpp
+  src/host/mesh2gp/scene_compare.cpp
+  src/host/obj_loader.cpp
+  src/host/voxel_builder.cpp
+  src/host/data_manager.cpp
+  src/host/ppm_util.cpp
+)
+# 渲染后端壳:CPU 版总在;CUDA 版有就用(用 nvcc 链接,否则 CUDA 的 -L 顺序
+# 会把 gcc-14 的 libstdc++ 排到前面,和 gcc-15 编的 core 库 ABI 冲突)。
+list(APPEND MESH2GP_SOURCES src/kernels/entrance/cpu.cpp)
+add_executable(mesh2gp ${MESH2GP_SOURCES})
+target_link_libraries(mesh2gp PRIVATE mupsi_header mupsi_core nlohmann_json::nlohmann_json OpenMP::OpenMP_CXX)
+if(NOT MUPSI_HAS_CUDA)
+  target_link_libraries(mesh2gp PRIVATE mupsi_backend_cpu)
+else()
+  set_target_properties(mesh2gp PROPERTIES LINKER_LANGUAGE CUDA)
+  target_link_libraries(mesh2gp PRIVATE mupsi_backend_cuda)
+  target_compile_definitions(mesh2gp PRIVATE MUPSI_USE_CUDA=1)
+endif()
+
 # ——— 可执行文件:链接所有可用后端 ———
 file(GLOB_RECURSE HOST_SOURCES CONFIGURE_DEPENDS src/host/*.cpp)
+list(FILTER HOST_SOURCES EXCLUDE REGEX "/src/host/mesh2gp/")
 add_executable(mupsi ${HOST_SOURCES})
 target_link_libraries(mupsi PRIVATE mupsi_header mupsi_core nlohmann_json::nlohmann_json OpenMP::OpenMP_CXX)
 if(NOT MUPSI_HAS_CUDA)
