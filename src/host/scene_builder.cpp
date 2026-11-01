@@ -244,33 +244,17 @@ namespace mps::host {
       return cfg;
     }
 
-    // Auto-fit: center the mesh and scale it into a sphere of `targetRadius`.
-    core::AABB box = core::AABB::empty();
-    for (const vec3f& v : obj.vertices) box.extend(v);
-    const vec3f center = box.centroid();
-    const vec3f diag   = box.diagonal();
-    const f32 diagLen  = mps::norm(diag);
-    const f32 scale    = (diagLen > 0.0f) ? (2.0f * targetRadius / diagLen) : 1.0f;
-    const vec3f pos    = {0.0f, 0.0f, -dist};
-
-    std::vector<vec3f> worldVerts(obj.vertices.size());
-    for (size_t i = 0; i < obj.vertices.size(); ++i)
-      worldVerts[i] = (obj.vertices[i] - center) * scale + pos;
-
-    // Sit the mesh on the floor: translate it down so its lowest vertex is at
-    // the floor plane (the auto-fit centers it, which leaves an oblong mesh
-    // floating above the floor).
+    // Auto-fit: centre the mesh, scale it into a sphere of `targetRadius`, and
+    // sit it on the floor. Shared with mesh2gp's comparison scene so both
+    // placements stay on the same floor plane.
     const f32 floorY = -150.0f;
-    {
-      core::AABB wb = core::AABB::empty();
-      for (const vec3f& v : worldVerts) wb.extend(v);
-      const f32 drop = wb.min.y - floorY;
-      for (vec3f& v : worldVerts) v.y -= drop;
-    }
+    const vec3f pos  = {0.0f, 0.0f, -dist};
+    const std::vector<vec3f> worldVerts =
+        fitMeshToRadius(obj.vertices, targetRadius, pos, floorY);
 
     const u32 nt = u32(obj.faces.size() / 3);
     cfg.host.addMeshMean(worldVerts.data(), u32(worldVerts.size()), obj.faces.data(), nt);
-    mplog("buildMeshGpScene: {} verts {} tris (scale {:.3f})", worldVerts.size(), nt, scale);
+    mplog("buildMeshGpScene: {} verts {} tris (radius {:.1f})", worldVerts.size(), nt, targetRadius);
 
     // ——— GP medium: mesh/voxel mean + sparse SE convolution noise ———
     core::Medium& m = cfg.medium;

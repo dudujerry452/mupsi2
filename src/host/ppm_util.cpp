@@ -13,6 +13,20 @@ namespace mps::host {
     }
   }
 
+  MPH void finish_frame(FrameBuffer<RGB_F32>& fb, i32 spp, const std::string& path) {
+    // render() accumulates; average here so no caller can skip it.
+    const f32 invSpp = 1.0f / f32(spp > 0 ? spp : 1);
+    for (i32 i = 0; i < fb.width * fb.height; ++i) fb.pixels[i] = fb.pixels[i] * invSpp;
+
+    FrameBuffer<RGB_8Bit> out;
+    out.width = fb.width;
+    out.height = fb.height;
+    out.pixels = new RGB_8Bit[size_t(fb.width) * size_t(fb.height)];
+    framebuffer_radiance_to_8bit(fb, out);
+    save_ppm(path, out);
+    delete[] out.pixels;
+  }
+
   MPH void save_ppm(const std::string& filename, const FrameBuffer<RGB_8Bit>& fb) {
     std::ofstream ofs(filename, std::ios::binary);
     ofs << "P6\n" << fb.width << " " << fb.height << "\n255\n";

@@ -33,10 +33,12 @@ namespace mps::host::m2g {
     f32 gap          = 2.6f;    // centre-to-centre distance, in radii
     i32 width = 640, height = 360;
     f32 fovDeg = 45.0f;         // same as scene_builder
-    f32 camDist = 4.0f;         // object distance from the camera, in radii
-                                //   3.0 crops the outer edge at aspect ~1.6:
-                                //   halfw = z*tan(22.5)*aspect; needs >= gap/2+1
-    f32 camHeight = 0.9f;       // camera height, in radii
+    f32 camDist = 4.0f;         // MINIMUM object distance in radii. The actual
+                                //   distance grows automatically if that is not
+                                //   enough to fit both objects in frame.
+    f32 camHeight = 0.0f;       // extra camera height above the objects' centre,
+                                //   in radii. 0 = look straight at them.
+    f32 frameMargin = 1.15f;    // 15% empty border around the fitted bounds
     bool floor = true;
   };
 

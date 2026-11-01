@@ -1,7 +1,10 @@
 #include "host/obj_loader.h"
 
+#include <cmath>
 #include <fstream>
 #include <sstream>
+
+#include "core/geometry/aabb.h"
 
 namespace mps::host {
 
@@ -65,6 +68,28 @@ namespace mps::host {
     }
 
     return !out.vertices.empty() && !out.faces.empty();
+  }
+
+  std::vector<vec3f> fitMeshToRadius(const std::vector<vec3f>& src, f32 targetRadius,
+                                     const vec3f& target, f32 floorY) {
+    core::AABB box = core::AABB::empty();
+    for (const vec3f& v : src) box.extend(v);
+    const vec3f center  = box.centroid();
+    const f32   diagLen = mps::norm(box.diagonal());
+    const f32   scale   = (diagLen > 0.0f) ? (2.0f * targetRadius / diagLen) : 1.0f;
+
+    std::vector<vec3f> out(src.size());
+    for (size_t i = 0; i < src.size(); ++i)
+      out[i] = (src[i] - center) * scale + target;
+
+    // Drop onto the floor: auto-fit centres the mesh, which leaves oblong shapes
+    // floating. Every caller passes the same floorY, so objects placed by
+    // different callers end up on exactly the same plane.
+    f32 minY = INFINITY;
+    for (const vec3f& v : out) minY = mps::minf(minY, v.y);
+    const f32 drop = minY - floorY;
+    for (vec3f& v : out) v.y -= drop;
+    return out;
   }
 
 }

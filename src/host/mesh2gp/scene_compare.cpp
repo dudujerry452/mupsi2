@@ -9,27 +9,6 @@
 
 namespace mps::host::m2g {
 
-  namespace {
-    // Same auto-fit convention as scene_builder: centre the mesh, scale its
-    // diagonal to 2*radius, then drop it onto the floor (y = 0).
-    std::vector<vec3f> fitToSphere(const std::vector<vec3f>& src, f32 radius, const vec3f& target) {
-      core::AABB box = core::AABB::empty();
-      for (const vec3f& v : src) box.extend(v);
-      const vec3f center = box.centroid();
-      const f32 diagLen = mps::norm(box.diagonal());
-      const f32 scale = (diagLen > 0.0f) ? (2.0f * radius / diagLen) : 1.0f;
-
-      std::vector<vec3f> out(src.size());
-      for (size_t i = 0; i < src.size(); ++i)
-        out[i] = (src[i] - center) * scale + target;
-
-      f32 minY = INFINITY;
-      for (const vec3f& v : out) minY = mps::minf(minY, v.y);
-      for (vec3f& v : out) v.y -= minY;
-      return out;
-    }
-  } // namespace
-
   CompareConfig buildCompareScene(const std::string& objPath,
                                   const gpifile::GPISData& art,
                                   const CompareParams& p) {
@@ -45,16 +24,47 @@ namespace mps::host::m2g {
       return cfg;
     }
 
-    // ——— Layout (main-renderer units: object radius 150, camera at origin) ———
-    const f32 R  = p.objectRadius;
-    const f32 dx = 0.5f * p.gap * R;
+    // ——— Layout ———
+    // The artifact is the authority for scale: it was baked at a fixed size and
+    // its voxel lattice CANNOT be rescaled at load time without desynchronising
+    // the field from the geometry it samples. So the LEFT mesh is scaled by the
+    // very same factor the artifact was baked with (header.meshScale) — then
+    // both objects are literally the same geometry at the same size, which is
+    // the whole point of the comparison.
+    const f32 floorY = -150.0f;   // matches scene_builder
+
+    const core::AABB artBox = art.bounds();
+    const vec3f artCentre   = artBox.centroid();
+    const f32   artRadius   = 0.5f * mps::norm(artBox.diagonal());
+    // Objects are drawn at the artifact's own size; --object-radius can override
+    // only if it agrees (the lattice cannot be rescaled).
+    const f32 R = (p.objectRadius > 0.0f) ? p.objectRadius : artRadius;
+    if (mps::fabsf(R - artRadius) > 1e-3f * mps::maxf(1.0f, artRadius)) {
+      mplog("buildCompareScene: ERROR objectRadius {:.4f} != artifact radius {:.4f}. "
+            "Re-bake with --scale so the lattice stays 1:1 with the geometry.", R, artRadius);
+      cfg.hasMedium = false;
+      return cfg;
+    }
+
+    const f32 dx   = 0.5f * p.gap * R;
     const f32 zObj = -(p.camDist * R);          // objects sit in front of the camera
     const vec3f leftTarget {-dx, 0.0f, zObj};
     const vec3f rightTarget{ dx, 0.0f, zObj};
 
     // ——— LEFT: plain triangle mesh (hard surface, no medium) ———
     {
-      std::vector<vec3f> v = fitToSphere(obj.vertices, R, leftTarget);
+      // Scale by the artifact's baked factor, then centre+drop exactly like the
+      // right-hand object, so the two are the same size and share a floor.
+      std::vector<vec3f> v = obj.vertices;
+      const f32 bakedScale = art.header.meshScale > 0.0f ? art.header.meshScale : 1.0f;
+      for (vec3f& x : v) x = x * bakedScale;
+
+      core::AABB mb = core::AABB::empty();
+      for (const vec3f& x : v) mb.extend(x);
+      const vec3f mc = mb.centroid();
+      const vec3f shift{ leftTarget.x - mc.x, floorY - mb.min.y, leftTarget.z - mc.z };
+      for (vec3f& x : v) x = x + shift;
+
       cfg.host.addMesh(v.data(), u32(v.size()), obj.faces.data(), u32(obj.faces.size() / 3),
                        u16(core::BsdfType::Lambertian), core::NO_MEDIUM, core::NO_LIGHT);
     }
@@ -67,22 +77,10 @@ namespace mps::host::m2g {
     // (bake it with --scale); rescaling the lattice without rescaling the
     // geometry inside it would desynchronise field and geometry.
     {
-      const core::AABB artBox = art.bounds();
-      const vec3f artCentre   = artBox.centroid();
-      const f32   artRadius   = 0.5f * mps::norm(artBox.diagonal());
-      const f32   unitScale   = (artRadius > 1e-9f) ? (R / artRadius) : 1.0f;
-
-      if (mps::fabsf(unitScale - 1.0f) > 1e-3f) {
-        mplog("buildCompareScene: ERROR artifact radius {:.5f} != objectRadius {:.4f}. "
-              "Bake the artifact at this size (--scale) so the lattice stays 1:1 "
-              "with the geometry it samples.", artRadius, R);
-        cfg.hasMedium = false;
-        return cfg;
-      }
-
-      // Move the artifact onto the right-hand slot and rest it on the floor.
+      // Move the artifact onto the right-hand slot and rest it on the SAME floor
+      // plane as the left mesh.
       const vec3f offset{ rightTarget.x - artCentre.x,
-                          -artBox.min.y,
+                          floorY - artBox.min.y,
                           rightTarget.z - artCentre.z };
 
       core::Medium& m = cfg.medium;
@@ -127,8 +125,10 @@ namespace mps::host::m2g {
 
     // ——— Floor + back wall (scene_builder's addFloorWalls) ———
     if (p.floor) {
-      const f32 floorY = -300.0f, backZ = -850.0f, extent = 500.0f;
-      const f32 zNear = zObj + 200.0f;
+      // Must be the SAME plane the objects rest on (outer floorY). This used to
+      // shadow it with -300, so the objects stood 150 units above the floor.
+      const f32 backZ = -850.0f, extent = 500.0f;
+      const f32 zNear = zObj + 300.0f;
       const std::vector<vec3f> fv = {{-extent, floorY, zNear}, {extent, floorY, zNear},
                                      {extent, floorY, backZ}, {-extent, floorY, backZ}};
       const std::vector<u32>   ff = {0, 1, 2, 0, 2, 3};
@@ -142,12 +142,41 @@ namespace mps::host::m2g {
                        u16(core::BsdfType::Lambertian), core::NO_MEDIUM, core::NO_LIGHT);
     }
 
-    // ——— Camera: lifted to p.camHeight and looking at the space between the
-    // two objects' centres, so neither one is cut off and the floor does not
-    // fill the frame. camHeight was accepted but unused before.
-    const vec3f eye{0.0f, p.camHeight * R, 0.0f};
-    const vec3f aim{0.0f, 0.5f * R, zObj};
-    cfg.camera = core::makeCamera(eye, mps::normalize(aim - eye), {0.0f, 1.0f, 0.0f},
+    // ——— Camera: frame the two objects' real bounds.
+    //
+    // Aim at their combined centre, then pick a distance that actually FITS
+    // them vertically. The old code used a fixed camDist and a height guessed
+    // from R; both objects ended up hanging off the bottom of the frame because
+    // the vertical half-extent at that distance (z*tan(fov/2)) was smaller than
+    // the distance from the centre down to the floor.
+    core::AABB both = core::AABB::empty();
+    for (const core::Mesh& m : cfg.host.meshes) {
+      if (m.info.bounds.max.y - m.info.bounds.min.y > 1.0f)   // skip floor/wall
+        both = core::AABB{ {mps::minf(both.min.x, m.info.bounds.min.x),
+                            mps::minf(both.min.y, m.info.bounds.min.y),
+                            mps::minf(both.min.z, m.info.bounds.min.z)},
+                           {mps::maxf(both.max.x, m.info.bounds.max.x),
+                            mps::maxf(both.max.y, m.info.bounds.max.y),
+                            mps::maxf(both.max.z, m.info.bounds.max.z)} };
+    }
+    const vec3f aim = both.centroid();
+    const vec3f eye{0.0f, aim.y + p.camHeight * R, 0.0f};
+
+    // Required half-extents, with a margin so neither object touches the border.
+    const f32 halfH = 0.5f * (both.max.y - both.min.y);
+    const f32 halfW = 0.5f * (both.max.x - both.min.x);
+    const f32 tanV  = mps::tanf(0.5f * p.fovDeg * mps::pi / 180.0f);
+    const f32 aspect = f32(p.width) / f32(p.height);
+    const f32 needV = (halfH + mps::fabsf(aim.y - eye.y)) * p.frameMargin;
+    const f32 needH = halfW * p.frameMargin;
+    const f32 minDist = mps::maxf(needV / tanV, needH / (tanV * aspect));
+
+    // camDist is a lower bound / override: never place the camera closer than
+    // what is needed to fit both objects.
+    const f32 dist = mps::maxf(mps::fabsf(aim.z - eye.z), minDist);
+    const vec3f eyeFit{eye.x, eye.y, aim.z + dist};
+
+    cfg.camera = core::makeCamera(eyeFit, mps::normalize(aim - eyeFit), {0.0f, 1.0f, 0.0f},
                                   p.fovDeg, p.width, p.height);
 
     mplog("buildCompareScene: dx={:.3f} radius={:.3f} res={}x{} | eye ({:.4f} {:.4f} {:.4f}) "

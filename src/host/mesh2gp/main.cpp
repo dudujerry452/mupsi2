@@ -48,7 +48,7 @@ namespace {
     f32 radius = 0.0f;   // 0 = auto: use the artifact's own size
     f32 gap = 2.6f;
     f32 camDist = 4.0f;    // object distance in radii; see CompareParams
-    f32 camHeight = 0.9f;  // camera height in radii
+    f32 camHeight = 0.0f;  // extra camera height above the objects' centre, in radii
     bool noMedium = false;   // debug: draw only the left mesh
   };
 
@@ -300,13 +300,12 @@ namespace {
     gpifile::GPISData art;
     if (!gpifile::read(a.input, art)) return 1;
 
-    // Default: draw at the artifact's own scale so the SDF lattice stays 1:1
-    // with the geometry it samples (see buildCompareScene).
-    const core::AABB ab = art.bounds();
-    const f32 artRadius = 0.5f * mps::norm(ab.diagonal());
-
+    // Draw at the artifact's own scale so the SDF lattice stays 1:1 with the
+    // geometry it samples (see buildCompareScene). Passing 0 means "use the
+    // artifact's size"; an explicit --object-radius is only honoured if it
+    // matches, since the lattice cannot be rescaled at load time.
     host::m2g::CompareParams cp;
-    cp.objectRadius = (a.radius > 0.0f) ? a.radius : artRadius;
+    cp.objectRadius = a.radius;   // 0 = from the artifact
     cp.gap          = a.gap;
     cp.camDist      = a.camDist;
     cp.camHeight    = a.camHeight;
@@ -361,21 +360,12 @@ namespace {
     kernels::Entrance<ACTIVE_BACKEND>::render(ctx, cfg.camera, a.spp, fb);
     std::fflush(stdout);
 
-    FrameBuffer<RGB_8Bit> out;
-    out.width = W; out.height = H;
-    out.pixels = new RGB_8Bit[size_t(W) * size_t(H)];
-    // Entrance::render() returns the *sum* over spp, not the mean — the main
-    // renderer does this same division itself (host/main.cpp invSpp). Omitting
-    // it here is what made everything clip to white at spp=32 (32x too bright)
-    // while 1spp looked merely dark.
-    const f32 invSpp = 1.0f / f32(a.spp > 0 ? a.spp : 1);
-    for (i32 i = 0; i < W * H; ++i) fb.pixels[i] = fb.pixels[i] * invSpp;
-    host::framebuffer_radiance_to_8bit(fb, out);
-    host::save_ppm(a.output, out);
+    // Average + tonemap + write, via the shared tail so the 1/spp division can
+    // never be forgotten here again (it was, and everything clipped to white).
+    host::finish_frame(fb, a.spp, a.output);
     std::printf("wrote %s\n", a.output.c_str());
 
     delete[] fb.pixels;
-    delete[] out.pixels;
     return 0;
   }
 

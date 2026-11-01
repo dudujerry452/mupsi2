@@ -23,4 +23,12 @@ namespace mps::host {
 
   MPH void save_ppm(const std::string& filename, const FrameBuffer<RGB_8Bit>& fb);
 
+  // Finish a render: divide the accumulator by spp, tone map, write the PPM.
+  //
+  // Entrance<Backend>::render() fills the framebuffer with the SUM over spp, not
+  // the mean — every caller has to divide. Doing it here means a new caller
+  // cannot forget: mesh2gp's render path omitted exactly this step and produced
+  // 32x-blown-out images at spp=32 while 1spp merely looked dark.
+  MPH void finish_frame(FrameBuffer<RGB_F32>& fb, i32 spp, const std::string& path);
+
 }

@@ -302,17 +302,10 @@ int main(int argc, char** argv) {
   mplogtag("render", "{}x{} spp={} scene={}", W, H, cfg.spp, scene);
   std::cout << "render time: " << sec << " s\n";
 
-  // 5. average + tonemap + save
-  const f32 invSpp = 1.0f / f32(cfg.spp);
-  mps::FrameBuffer<mps::RGB_8Bit> out;
-  out.width = W; out.height = H;
-  out.pixels = new mps::RGB_8Bit[W * H];
-  for (i32 i = 0; i < W * H; ++i) fb.pixels[i] = fb.pixels[i] * invSpp;
-  mps::host::framebuffer_radiance_to_8bit(fb, out);
-  mps::host::save_ppm(outputArg, out);
+  // 5. average + tonemap + save (shared tail; see host::finish_frame)
+  mps::host::finish_frame(fb, cfg.spp, outputArg);
 
   delete[] fb.pixels;
-  delete[] out.pixels;
   delete[] envPixels;
   mps::host::freeDevice(device);
 
