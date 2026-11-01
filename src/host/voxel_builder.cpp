@@ -22,13 +22,34 @@ namespace mps::host {
 
     const vec3f diag = bounds.diagonal();
     const f32 maxExtent = mps::maxf(diag.x, mps::maxf(diag.y, diag.z));
-    grid.cellSize = maxExtent / f32(res);
+
+    // The grid must COVER the mesh plus `margin` on BOTH sides along every axis,
+    // so the cell size follows the padded span, not the raw AABB extent. Sizing
+    // cells from maxExtent while also padding (the previous form) pushed the
+    // +x/+y/+z half of the mesh outside the grid, where SparseSDFGrid::evalGrad
+    // falls back to `+band` — silently flipping interior samples to "outside".
+    //
+    // cellSize = (maxExtent + 2*margin) / res. band is a fixed number of cells
+    // (that relation is what the caller asked for), so solve for it directly:
+    //   band = bandCells * cellSize,  margin = band + 1.5 * cellSize
+    // => cellSize * res = maxExtent + 2*bandCells*cellSize + 3*cellSize
+    // => cellSize = maxExtent / (res - 2*bandCells - 3)
+    // The resolution is expressed over the padded span, so effective detail per
+    // world unit is slightly lower than a raw-AABB grid — the padding is the
+    // price of a correct out-of-grid fallback.
+    const f32 denom = f32(res) - 2.0f * bandCells - 3.0f;
+    grid.cellSize = (denom > 1.0f) ? (maxExtent / denom) : (maxExtent / f32(res));
     grid.band     = bandCells * grid.cellSize;
     grid.res      = res;
 
     // Pad so the whole narrow band sits inside the grid, plus a little exterior.
     const f32 margin = grid.band + 1.5f * grid.cellSize;
     grid.origin = bounds.min - vec3f{margin, margin, margin};
+
+    if (denom <= 1.0f) {
+      mplog("buildSparseSDFGrid: res={} too small for bandCells={} — the grid may "
+            "not cover the mesh; increase --res", res, bandCells);
+    }
 
     const u64 total = u64(res) * u64(res) * u64(res);
     grid.signGrid.assign(size_t(total), 0);
