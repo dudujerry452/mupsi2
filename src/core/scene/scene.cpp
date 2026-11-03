@@ -35,6 +35,11 @@ namespace mps::core {
       auto dev = ::mps::upload(bsdfs, num_bsdfs); 
       bsdfs = dev; 
     }
+
+    if(num_lights > 0) {
+      auto dev = ::mps::upload(lights, num_lights); 
+      lights = dev; 
+    }
   }
   
   MPH void SceneDevice::destory() {
@@ -56,6 +61,10 @@ namespace mps::core {
       ::mps::destory(bsdfs); 
     }
 
+    if(num_lights != 0) {
+      ::mps::destory(lights); 
+    }
+
     *this = SceneDevice{};
   }
 
@@ -72,6 +81,10 @@ namespace mps::core {
 
     if(num_bsdfs != 0) {
       delete[] bsdfs; 
+    }
+
+    if(num_lights != 0) {
+      delete[] lights; 
     }
 
     *this = SceneDevice{}; 
@@ -101,12 +114,22 @@ namespace mps::core {
       std::copy(bsdfs.begin(), bsdfs.end(), dev.bsdfs);
     }
 
+    dev.num_lights = lights.size(); 
+    if(dev.num_lights != 0) {
+      dev.lights = new core::Light[dev.num_lights](); 
+      std::copy(lights.begin(), lights.end(), dev.lights); 
+    }
+
     return dev; 
   }
 
   MPH u32 SceneHost::AddSphere(Sphere&& sphere) {
     spheres.push_back(std::move(sphere)); 
-    return spheres.size()-1; 
+    u32 id = spheres.size()-1; 
+    if(sphere.info.hasEmis) {
+      lights.push_back({PrimitiveType::Sphere, id}); 
+    }
+    return id; 
   }
 
   MPH u32 SceneHost::AddTexture(const char* path) {
@@ -134,6 +157,10 @@ namespace mps::core {
     u32 bsdfid = scene.AddBsdf(BsdfType::Lambertain, texid); 
     
     scene.AddSphere(buildSphere({0, 0, -10}, 2, bsdfid));
+    Sphere sph = buildSphere({-5, 0, -10}, 2, bsdfid);
+    sph.info.hasEmis = 1; 
+    sph.info.emisTexID = texid; 
+    scene.AddSphere(std::move(sph));
     return scene; 
   }
 

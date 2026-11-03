@@ -11,8 +11,7 @@ namespace mps::core {
 
     HitRecord hr{}; 
     hr.hit = false;
-    hr.bsdfId = primitive.info.bsdfId; 
-
+    
     const auto C = primitive.info.wpos; 
     const auto O = ray.at(ray.min); 
     const auto D = ray.dir; // normalized 
@@ -62,6 +61,9 @@ namespace mps::core {
     hr.tan = T; 
     hr.bitan = B; 
 
+    hr.bsdfID = primitive.info.bsdfID; 
+    hr.hasEmis = primitive.info.hasEmis; 
+    hr.emisTexID = primitive.info.emisTexID; 
   
     return hr; 
 

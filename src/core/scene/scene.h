@@ -5,13 +5,9 @@
 #include "core/primitive/primitive.h"
 #include "core/basic/texture.h"
 #include "core/bsdf/bsdf.h"
+#include "core/scene/light.h"
 
 namespace mps::core {
-
-
-
- 
-  
 
    struct SceneDevice {
     
@@ -29,6 +25,9 @@ namespace mps::core {
     u32 num_bsdfs; 
     Bsdf *bsdfs; 
 
+    u32 num_lights; 
+    Light *lights; 
+
     // ---- cuda ----
     // upload to device and rebind
     MPH void upload(); 
@@ -42,7 +41,7 @@ namespace mps::core {
 
     std::vector<Mesh> meshes; 
     std::vector<Sphere> spheres;  
-    // std::vector<void*> lights; 
+    std::vector<Light> lights; 
     std::vector<Texture<RGB_F32> > textures;
     std::vector<Bsdf> bsdfs; 
     // std::vector<Medium> media;  

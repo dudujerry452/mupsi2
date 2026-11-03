@@ -12,11 +12,17 @@ namespace mps::core {
 
   struct alignas(16) PrimitiveInfo {
     PrimitiveType type; 
-    u16 bsdfId;
-    u16 texId;
+    u16 bsdfID;
+    byte hasEmis; 
+    u16 emisTexID;
     vec3f wpos;
     vec4f quater; 
     f32 scale; 
+  }; 
+
+  struct Primitive {
+    PrimitiveType type; 
+    u32 primID; 
   }; 
 
   struct Sphere {

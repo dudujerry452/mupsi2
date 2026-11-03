@@ -8,6 +8,8 @@
 #include "core/scene/scene.h"
 #include "core/utils/cuda_util.h"
 
+#include "core/math/random.h"
+
 namespace mps::kernels {
 
 
@@ -39,7 +41,9 @@ namespace mps::kernels {
     ray.min = 0.01f; 
     ray.max = 10000.0f; 
 
-    ctx.framebuffer.pixel(col, row) = core::trace(ray, ctx); 
+    mps::core::Random rdm(mps::core::make_seed(col, row)); 
+
+    ctx.framebuffer.pixel(col, row) = core::trace(ray, ctx, rdm); 
   }
 
   Texture<RGB_F32> Entrance<Backend::CUDA>::run(const core::RenderContext& ctx) {

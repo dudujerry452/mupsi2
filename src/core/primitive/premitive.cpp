@@ -7,7 +7,7 @@ namespace mps::core {
     ret.info.type = PrimitiveType::Sphere; 
     ret.info.wpos = pos; 
     ret.info.scale = 1.0f; 
-    ret.info.bsdfId = bsdfID; 
+    ret.info.bsdfID = bsdfID; 
     ret.radius = r; 
     return ret; 
   }

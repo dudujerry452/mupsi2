@@ -21,6 +21,6 @@ namespace mps::core {
   }; 
 
 
-  MPHD RGB_F32 trace(const Ray& ray, const RenderContext& ctx); 
+  MPHD RGB_F32 trace(const Ray& ray, const RenderContext& ctx, Random& rdm); 
 
 }

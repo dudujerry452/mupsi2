@@ -26,9 +26,9 @@ namespace mps::core {
     vec3f bitan; 
 
     vec2f uv; 
-    u16 texId; 
-    u16 bsdfId; 
-    u16 lightId;  
+    u16 bsdfID; 
+    byte hasEmis; 
+    u16 emisTexID; 
   }; 
 
   MPHD HitRecord intersect( const Ray& ray, const Sphere& primitive); 
