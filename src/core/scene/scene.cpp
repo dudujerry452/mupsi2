@@ -107,6 +107,7 @@ namespace mps::core {
       dev.textures = new Texture<RGB_F32>[dev.num_textures](); 
       for(u32 i = 0; i < dev.num_textures; i ++) {
         dev.textures[i] = textures[i]; 
+        dev.textures[i].pixels = new RGB_F32[dev.textures->pixelnum()](); 
         memcpy(dev.textures[i].pixels, textures[i].pixels, dev.textures[i].bytesize()); 
       }
     }
@@ -126,6 +127,7 @@ namespace mps::core {
     return dev; 
   }
 
+  // might be called multi times, so safe realease
   MPH SceneHost::~SceneHost() {
     for(auto& tex: textures) {
       safe_free_arr(&tex.pixels);   
