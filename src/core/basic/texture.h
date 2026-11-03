@@ -1,6 +1,7 @@
 #pragma once 
 
 #include "core/basic/core.h"
+#include "core/basic/mems.h"
 #include "core/utils/cuda_util.h"
 
 namespace mps {
@@ -31,7 +32,7 @@ namespace mps {
 
     // ---- cpu ----
     MPH void free() {
-      if(pixels != nullptr) delete[] pixels; 
+      safe_free_arr(&pixels); 
       *this = Texture<PixelType>{}; 
     }
 

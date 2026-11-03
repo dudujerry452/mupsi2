@@ -46,6 +46,8 @@ namespace mps::core {
     std::vector<Bsdf> bsdfs; 
     // std::vector<Medium> media;  
 
+    MPH ~SceneHost(); 
+
     MPH u32 AddSphere(Sphere&& sphere); 
     MPH u32 AddTexture(const char* path); 
     MPH u32 AddTexture(i32 width, i32 height); 

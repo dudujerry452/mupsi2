@@ -1,4 +1,5 @@
 #include "core/scene/scene.h"
+#include "core/basic/mems.h"
 #include "core/basic/types.h"
 #include "core/bsdf/bsdf.h"
 #include "core/primitive/primitive.h"
@@ -28,7 +29,7 @@ namespace mps::core {
         texs[i].upload(); 
       }
       textures = ::mps::upload(texs, num_textures); 
-      delete[] texs; 
+      safe_free_arr(&texs);  
     } 
 
     if(num_bsdfs > 0) {
@@ -53,7 +54,7 @@ namespace mps::core {
       for(u32 i = 0; i < num_textures; i ++) {
         ::mps::destory(host_texs[i].pixels); 
       }
-      delete[] host_texs; 
+      safe_free_arr(&host_texs);  
       ::mps::destory(textures); 
     }
 
@@ -70,21 +71,23 @@ namespace mps::core {
 
 
   MPH void SceneDevice::free() {
-    if(spheres != nullptr) delete[] spheres; 
+    if(num_spheres != 0) {
+      safe_free_arr(&spheres); 
+    }
 
     if(num_textures != 0) {
       for(u32 i = 0; i < num_textures; i ++) {
-        delete [] textures[i].pixels; 
+        safe_free_arr(&textures[i].pixels);  
       }
-      delete[] textures; 
+      safe_free_arr(&textures); 
     }
 
     if(num_bsdfs != 0) {
-      delete[] bsdfs; 
+      safe_free_arr(&bsdfs); 
     }
 
     if(num_lights != 0) {
-      delete[] lights; 
+      safe_free_arr(&lights); 
     }
 
     *this = SceneDevice{}; 
@@ -121,6 +124,12 @@ namespace mps::core {
     }
 
     return dev; 
+  }
+
+  MPH SceneHost::~SceneHost() {
+    for(auto& tex: textures) {
+      safe_free_arr(&tex.pixels);   
+    }
   }
 
   MPH u32 SceneHost::AddSphere(Sphere&& sphere) {
