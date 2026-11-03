@@ -9,7 +9,7 @@ namespace mps::core {
   MPHD RGB_F32 trace(const Ray& ray, const RenderContext& ctx) {
     RGB_F32 ret{}; 
     f32 maxx = ray.max; 
-    HitRecord max_hit; 
+    HitRecord max_hit{}; 
     for(u32 i = 0; i < ctx.scene.num_spheres; i ++) {
       auto hit = intersect(ray, ctx.scene.spheres[i]); 
       if (!hit.hit || hit.t > maxx) continue; 
@@ -19,6 +19,7 @@ namespace mps::core {
     // vec3f x = vec3f{1.0f, 1.0f, 1.0f} * (mps::dot(hit.ng, vec3f{-1.0, 0.0, 0.0})); 
     //   ret.r = x.x, ret.g = x.y, ret.b = x.z;
     auto& hit = max_hit; 
+    if(hit.hit) {
     
     auto& bsdf = ctx.scene.bsdfs[hit.bsdfId];
     f32 pdf; 
@@ -37,7 +38,11 @@ namespace mps::core {
 
     vec3f ret_vec = vec3f{bsdf_pars.albedo.r, bsdf_pars.albedo.g, bsdf_pars.albedo.b} * (mps::dot(hit.ng, vec3f{-1.0, 0.0, 0.0})); 
 
-    return RGB_F32{ret_vec.x, ret_vec.y, ret_vec.z};     
+    return RGB_F32{ret_vec.x, ret_vec.y, ret_vec.z};  
+    }
+    else {
+      return RGB_F32{}; 
+    }
   }
 
 

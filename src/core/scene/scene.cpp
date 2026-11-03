@@ -28,6 +28,7 @@ namespace mps::core {
         texs[i].upload(); 
       }
       textures = ::mps::upload(texs, num_textures); 
+      delete[] texs; 
     } 
 
     if(num_bsdfs > 0) {
@@ -42,9 +43,12 @@ namespace mps::core {
     }
     
     if(num_textures != 0) {
+      // download texs from device first
+      auto* host_texs = ::mps::download(textures, num_textures);
       for(u32 i = 0; i < num_textures; i ++) {
-        ::mps::destory(textures[i].pixels); 
+        ::mps::destory(host_texs[i].pixels); 
       }
+      delete[] host_texs; 
       ::mps::destory(textures); 
     }
 
@@ -115,6 +119,7 @@ namespace mps::core {
     tex.width = width; 
     tex.height = height; 
     tex.pixels = new RGB_F32[tex.pixelnum()](); 
+    textures.push_back(tex); 
     return textures.size()-1; 
   }
   MPH u32 SceneHost::AddBsdf(BsdfType type, u32 texID) {

@@ -14,7 +14,7 @@ namespace mps::core {
     hr.bsdfId = primitive.info.bsdfId; 
 
     const auto C = primitive.info.wpos; 
-    const auto O = ray.o + ray.at(ray.min); 
+    const auto O = ray.at(ray.min); 
     const auto D = ray.dir; // normalized 
     const auto V = O - C; 
     const auto R = primitive.radius * primitive.info.scale; 
