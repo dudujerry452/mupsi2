@@ -4,16 +4,16 @@
 
 namespace mps::core {
 
-  MPHD MPINL RGB_F32 BsdfImpl<BsdfType::Lambertain>::f(vec3f wi, vec3f wo, const BsdfParam& par) {
+  MPHD RGB_F32 BsdfImpl<BsdfType::Lambertain>::f(vec3f wi, vec3f wo, const BsdfParam& par) {
     if (wi.z < 0.0f || wo.z < 0.0f) return {0, 0,0 }; 
     RGB_F32 albedo = par.albedo;
     return albedo * inv_pi; 
   }
-  MPHD MPINL f32     BsdfImpl<BsdfType::Lambertain>::pdf(vec3f wi, vec3f wo, const BsdfParam& par) {
+  MPHD f32     BsdfImpl<BsdfType::Lambertain>::pdf(vec3f wi, vec3f wo, const BsdfParam& par) {
     if(wi.z < 0.0f || wo.z < 0.0f) return 0.0f;
      return wi.z * inv_pi; 
   }
-  MPHD MPINL vec3f   BsdfImpl<BsdfType::Lambertain>::sample(vec3f wo, f32& pdf, const BsdfParam& par, Random& rd) {
+  MPHD vec3f   BsdfImpl<BsdfType::Lambertain>::sample(vec3f wo, f32& pdf, const BsdfParam& par, Random& rd) {
     if(wo.z < 0.0f) {
       pdf = 0.0f; 
       return vec3f{};  

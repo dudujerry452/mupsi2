@@ -109,6 +109,14 @@ namespace mps {
   // ——— scalar min/max/clamp/lerp ———
   MPHD MPINL f32 minf(f32 a, f32 b) { return a < b ? a : b; }
   MPHD MPINL f32 maxf(f32 a, f32 b) { return a > b ? a : b; }
+  MPHD MPINL i32 mini(i32 a, i32 b) { return a < b ? a : b; }
+  MPHD MPINL i32 maxi(i32 a, i32 b) { return a > b ? a : b; }
+  
+  template<typename T> 
+  MPHD MPINL T max(const T& a, const T& b) {return a > b ? a : b; }
+  template<typename T> 
+  MPHD MPINL T min(const T& a, const T& b) {return a < b ? a : b; } 
+
   MPHD MPINL f32 clampf(f32 x, f32 lo, f32 hi) { return x < lo ? lo : (x > hi ? hi : x); }
   MPHD MPINL f32 lerpf(f32 a, f32 b, f32 t) { return a + (b - a) * t; }
 

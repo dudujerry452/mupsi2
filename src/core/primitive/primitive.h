@@ -24,7 +24,7 @@ namespace mps::core {
     f32 radius; 
   }; 
 
-  MPHD Sphere buildSphere(vec3f pos, f32 r);
+  MPHD Sphere buildSphere(vec3f pos, f32 r, u32 bsdfID);
 
   struct Mesh {
     PrimitiveInfo info; 

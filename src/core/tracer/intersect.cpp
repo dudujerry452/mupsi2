@@ -11,12 +11,13 @@ namespace mps::core {
 
     HitRecord hr{}; 
     hr.hit = false;
+    hr.bsdfId = primitive.info.bsdfId; 
 
     const auto C = primitive.info.wpos; 
     const auto O = ray.o + ray.at(ray.min); 
     const auto D = ray.dir; // normalized 
     const auto V = O - C; 
-    const auto R = primitive.radius; 
+    const auto R = primitive.radius * primitive.info.scale; 
 
     // solve 2 var equation
     f32 k = mps::dot(D, V); 
@@ -60,6 +61,7 @@ namespace mps::core {
     hr.uv = {u, v}; 
     hr.tan = T; 
     hr.bitan = B; 
+
   
     return hr; 
 

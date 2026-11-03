@@ -4,6 +4,7 @@
 #include "core/basic/types.h"
 #include "core/primitive/primitive.h"
 #include "core/basic/texture.h"
+#include "core/bsdf/bsdf.h"
 
 namespace mps::core {
 
@@ -25,6 +26,9 @@ namespace mps::core {
     u32 num_textures; 
     Texture<RGB_F32> *textures; 
 
+    u32 num_bsdfs; 
+    Bsdf *bsdfs; 
+
     // ---- cuda ----
     // upload to device and rebind
     MPH void upload(); 
@@ -40,10 +44,13 @@ namespace mps::core {
     std::vector<Sphere> spheres;  
     // std::vector<void*> lights; 
     std::vector<Texture<RGB_F32> > textures;
-    // std::vector<Bsdf> bsdfs; 
+    std::vector<Bsdf> bsdfs; 
     // std::vector<Medium> media;  
 
-    MPH void AddSphere(Sphere&& sphere); 
+    MPH u32 AddSphere(Sphere&& sphere); 
+    MPH u32 AddTexture(const char* path); 
+    MPH u32 AddTexture(i32 width, i32 height); 
+    MPH u32 AddBsdf(BsdfType type, u32 texID); 
     MPH core::SceneDevice transform() const; 
   }; 
 

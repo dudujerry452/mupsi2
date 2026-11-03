@@ -1,8 +1,6 @@
 #pragma once 
 #include "core/basic/core.h"
 #include "core/basic/types.h"
-#include "core/basic/texture.h"
-#include "core/scene/scene.h"
 #include "core/utils/log.h"
 #include "core/math/random.h"
 
@@ -36,9 +34,9 @@ namespace mps::core {
   // ------------------ 
 
   template<> struct BsdfImpl<BsdfType::Lambertain> {
-    static MPHD MPINL RGB_F32 f(vec3f, vec3f, const BsdfParam&);
-    static MPHD MPINL f32     pdf(vec3f, vec3f, const BsdfParam&);
-    static MPHD MPINL vec3f   sample(vec3f, f32&, const BsdfParam&, Random&);
+    static MPHD RGB_F32 f(vec3f wi, vec3f wo, const BsdfParam& par);
+    static MPHD f32     pdf(vec3f wi, vec3f wo, const BsdfParam& par);
+    static MPHD vec3f   sample(vec3f wo, f32& pdf, const BsdfParam& par, Random& rd);
   };
 
   // ------------------ 
