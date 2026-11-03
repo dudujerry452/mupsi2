@@ -1,4 +1,5 @@
 #include "core/scene/scene.h"
+#include "core/basic/types.h"
 #include "core/primitive/primitive.h"
 
 #include "core/utils/cuda_util.h"
@@ -7,9 +8,22 @@ namespace mps::core {
 
   
   MPH void SceneDevice::upload() {
-    auto dev = ::mps::upload(spheres, num_spheres);
-    spheres = dev;  
+    if(num_spheres > 0) {
+      auto dev = ::mps::upload(spheres, num_spheres);
+      spheres = dev;  
+    }
+    
+    if(num_textures > 0) {
+      using textype = std::remove_pointer_t<decltype(textures)>; 
+      textype *texs = new textype[num_textures]();  
+      for(u32 i = 0; i < num_textures; i ++) {
+        texs[i] = textures[i]; 
+        texs[i].upload(); 
+      }
+      textures = ::mps::upload(texs, num_textures); 
+    } 
   }
+  
   MPH void SceneDevice::destory() {
     ::mps::destory(spheres); 
     *this = SceneDevice{};
