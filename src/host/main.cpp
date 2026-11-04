@@ -28,7 +28,11 @@ int main() {
     ctx.framebuffer.width = 512; 
     ctx.framebuffer.height = 256; 
     ctx.framebuffer.alloc(); 
+    ctx.framebuffer_1.width = 512; 
+    ctx.framebuffer_1.height = 256; 
     ctx.framebuffer_1.alloc(); 
+    ctx.framebuffer_2.width = 512; 
+    ctx.framebuffer_2.height = 256; 
     ctx.framebuffer_2.alloc(); 
     ctx.settings.max_bounce = 10; 
 
@@ -43,10 +47,13 @@ int main() {
     mps::host::savePPM("test.ppm", out); 
     mps::host::radianceTo8bit(out, fbs[1]); 
     mps::host::savePPM("test_depth.ppm", out); 
+    mps::host::radianceTo8bit(out, fbs[2]); 
+    mps::host::savePPM("test_debug.ppm", out); 
 
     out.free();
     fbs[0].free();
     fbs[1].free();  
+    fbs[2].free();  
     ctx.framebuffer.free(); 
     ctx.framebuffer_1.free(); 
     ctx.framebuffer_2.free(); 

@@ -5,6 +5,7 @@
 #include "core/tracer/intersect.h"
 #include "core/math/math_util.h"
 #include "core/math/random.h"
+#include "core/utils/cuda_util.h"
 
 namespace mps::core {
 
@@ -99,16 +100,6 @@ namespace mps::core {
     return vec3f_to_RGBF32(ret);  
   }
 
-  struct debug_render_lines {
-    struct line{
-      vec3f start; 
-      vec3f end; 
-      RGB_F32 albedo; 
-    }; 
-    line lines[50]; // max 50 bounces
-    u32 num_bounce; 
-  };
-
   MPHD debug_render_lines trace_visual(const Ray& ray, const RenderContext& ctx, Random& rdm) {
     // --------
     debug_render_lines debug{}; 
@@ -124,7 +115,7 @@ namespace mps::core {
         ret = ret + albedo * RGBF32_to_vec3f(bsdf_ret.emission * 5); // TODO 
 
         // --------
-        debug.lines[bounce].start = cur_ray.o; 
+        debug.lines[bounce].start = cur_ray.at(RenderConstants::RAY_MIN); // 用常量偏移避免投影 /0
         debug.lines[bounce].end = hit.p; 
         debug.lines[bounce].albedo = vec3f_to_RGBF32(albedo); 
         debug.num_bounce = bounce+1;

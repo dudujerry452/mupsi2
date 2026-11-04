@@ -6,6 +6,6 @@
 namespace mps::host {
 
   // modify orig, draw lines
-  MPH void draw_debug(Texture<RGB_F32> orig, Texture<RGB_F32> depth, const core::debug_render_lines& debug);
+  MPH void draw_debug(Texture<RGB_F32> orig, Texture<RGB_F32> depth, const core::debug_render_lines* debug, u32 num, const core::Camera& cam);
 
 }

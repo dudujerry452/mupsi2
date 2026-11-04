@@ -12,6 +12,8 @@
 
 #include "core/math/random.h"
 
+#include "host/draw_debug.h"
+
 #include <vector>
 
 namespace mps::kernels {
@@ -60,13 +62,21 @@ namespace mps::kernels {
     ctx.framebuffer.pixel(col, row) = core::trace_depth(ray, ctx, rdm); 
   }
 
-  MPG void trace_lines(core::Ray ray, core::RenderContext ctx) {
+  MPG void trace_lines(core::RenderContext ctx, core::debug_render_lines* out) {
     u32 col = blockIdx.x * blockDim.x + threadIdx.x; 
     u32 row = blockIdx.y * blockDim.y + threadIdx.y; 
 
-    if(col == 0 && row == 0) {
-      // TODO: use trace_visual drawing a ray stack, and download to host somehow
-    }
+    u32 width = ctx.framebuffer.width; 
+    u32 height = ctx.framebuffer.height; 
+    if (col >= width || row >= height) return; 
+    if (col % 10 != 0 || row % 10 != 0) return; // 每 10x10 像素画一次
+
+    u32 stride = (width + 9) / 10; 
+    u32 idx = (row / 10) * stride + (col / 10); 
+
+    core::Ray ray = cast_ray(col, row, ctx); 
+    mps::core::Random rdm; rdm.init(mps::core::make_seed_f(col, row)); 
+    out[idx] = core::trace_visual(ray, ctx, rdm); // 世界坐标, 投影在 host draw_debug 做
   }
 
   std::vector<Texture<RGB_F32>> Entrance<Backend::CUDA>::run(const core::RenderContext& ctx) {
@@ -96,6 +106,33 @@ namespace mps::kernels {
     res = _ctx.framebuffer; 
     res.download();
     ret.push_back(res); 
+
+    // ---- debug ray path: 每 10x10 像素画一条路径 ----
+    u32 width = _ctx.framebuffer.width; 
+    u32 height = _ctx.framebuffer.height; 
+    u32 stride = (width + 9) / 10; 
+    u32 nrows = (height + 9) / 10; 
+    u32 count = stride * nrows; 
+
+    core::debug_render_lines* host_paths = new core::debug_render_lines[count](); 
+    core::debug_render_lines* dev_paths = ::mps::upload(host_paths, count); 
+    delete[] host_paths; 
+
+    trace_lines<<<griddim, blockdim>>>(_ctx, dev_paths); 
+    cudaCheckLast();
+
+    core::debug_render_lines* paths = ::mps::download(dev_paths, count); 
+    ::mps::destory(dev_paths); 
+
+    // overlay the ray path onto a copy of the rendered image
+    Texture<RGB_F32> overlay; 
+    overlay.width = ret[0].width; 
+    overlay.height = ret[0].height; 
+    overlay.alloc(); 
+    for (i32 i = 0; i < ret[0].pixelnum(); ++i) overlay.pixels[i] = ret[0].pixels[i]; 
+    host::draw_debug(overlay, ret[1], paths, count, ctx.camera); 
+    delete[] paths; 
+    ret.push_back(overlay); 
 
     _ctx.framebuffer.destory(); 
     _ctx.scene.destory(); 
