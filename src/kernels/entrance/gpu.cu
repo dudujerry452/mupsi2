@@ -60,6 +60,15 @@ namespace mps::kernels {
     ctx.framebuffer.pixel(col, row) = core::trace_depth(ray, ctx, rdm); 
   }
 
+  MPG void trace_lines(core::Ray ray, core::RenderContext ctx) {
+    u32 col = blockIdx.x * blockDim.x + threadIdx.x; 
+    u32 row = blockIdx.y * blockDim.y + threadIdx.y; 
+
+    if(col == 0 && row == 0) {
+      // TODO: use trace_visual drawing a ray stack, and download to host somehow
+    }
+  }
+
   std::vector<Texture<RGB_F32>> Entrance<Backend::CUDA>::run(const core::RenderContext& ctx) {
     mplog("Use Backend: CUDA");
 

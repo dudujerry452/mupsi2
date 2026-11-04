@@ -29,4 +29,7 @@ namespace mps::core {
   MPHD RGB_F32 trace(const Ray& ray, const RenderContext& ctx, Random& rdm); 
   MPHD RGB_F32 trace_depth(const Ray& ray, const RenderContext& ctx, Random& rdm);
 
+  struct debug_render_lines; 
+  MPHD debug_render_lines trace_visual(const Ray& ray, const RenderContext& ctx, Random& rdm);
+
 }

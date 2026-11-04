@@ -73,8 +73,8 @@ namespace mps::core {
       auto hit = intersect(cur_ray, ctx.scene); 
       if(hit.hit) {
         auto bsdf_ret = compute_bsdf(hit, ctx.scene, rdm); 
-        ret = ret + albedo * RGBF32_to_vec3f(bsdf_ret.emission* 5); 
-        // TODO: deal with the case pdf == 0.0f
+        ret = ret + albedo * RGBF32_to_vec3f(bsdf_ret.emission * 5); // TODO 
+        if(bsdf_ret.pdf == 0.0f) break; // impossible sample wi
         albedo = albedo * RGBF32_to_vec3f(bsdf_ret.albedo) * mps::dot(bsdf_ret.wi, hit.ng) / bsdf_ret.pdf; 
         cur_ray.o = hit.p; 
         cur_ray.dir = bsdf_ret.wi; 
@@ -97,6 +97,49 @@ namespace mps::core {
     }
     
     return vec3f_to_RGBF32(ret);  
+  }
+
+  struct debug_render_lines {
+    struct line{
+      vec3f start; 
+      vec3f end; 
+      RGB_F32 albedo; 
+    }; 
+    line lines[50]; // max 50 bounces
+    u32 num_bounce; 
+  };
+
+  MPHD debug_render_lines trace_visual(const Ray& ray, const RenderContext& ctx, Random& rdm) {
+    // --------
+    debug_render_lines debug{}; 
+    // --------
+    vec3f ret{}; 
+
+    vec3f albedo = {1.0f, 1.0f, 1.0f}; 
+    Ray cur_ray = ray; 
+    for(i32 bounce = 0; bounce < ctx.settings.max_bounce; bounce ++) {
+      auto hit = intersect(cur_ray, ctx.scene); 
+      if(hit.hit) {
+        auto bsdf_ret = compute_bsdf(hit, ctx.scene, rdm); 
+        ret = ret + albedo * RGBF32_to_vec3f(bsdf_ret.emission * 5); // TODO 
+
+        // --------
+        debug.lines[bounce].start = cur_ray.o; 
+        debug.lines[bounce].end = hit.p; 
+        debug.lines[bounce].albedo = vec3f_to_RGBF32(albedo); 
+        debug.num_bounce = bounce+1;
+        // --------
+
+        if(bsdf_ret.pdf == 0.0f) break; // impossible sample wi
+        albedo = albedo * RGBF32_to_vec3f(bsdf_ret.albedo) * mps::dot(bsdf_ret.wi, hit.ng) / bsdf_ret.pdf; 
+        cur_ray.o = hit.p; 
+        cur_ray.dir = bsdf_ret.wi; 
+      }
+      else {
+        break; 
+      }
+    }
+    return debug;  
   }
 
 
