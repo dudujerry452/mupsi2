@@ -42,7 +42,7 @@ namespace mps::kernels {
     ray.min = core::RenderConstants::RAY_MIN; 
     ray.max = ctx.constant.RAY_MAX; 
 
-    mps::core::Random rdm(mps::core::make_seed(col, row)); 
+    mps::core::Random rdm(mps::core::make_seed_f(col, row)); 
 
     ctx.framebuffer.pixel(col, row) = core::trace(ray, ctx, rdm); 
   }
