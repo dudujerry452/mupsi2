@@ -7,6 +7,8 @@
 
 #include "core/basic/texture.h"
 
+#include "core/tracer/constant.h"
+
 namespace mps::core {
 
   struct RenderSettings {
@@ -15,6 +17,7 @@ namespace mps::core {
 
   struct RenderContext {
     RenderSettings settings; 
+    RenderConstants constant; 
     SceneDevice scene; 
     Camera camera; 
     Texture<RGB_F32> framebuffer; 

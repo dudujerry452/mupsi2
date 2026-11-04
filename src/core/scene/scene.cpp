@@ -164,7 +164,7 @@ namespace mps::core {
   MPH SceneHost buildScene_Spot() {
     SceneHost scene; 
     
-    u32 texid = scene.AddTexture("spot_tex1.png");
+    u32 texid = scene.AddTexture("spot_tex1.jpg");
     u32 bsdfid = scene.AddBsdf(BsdfType::Lambertain, texid); 
     
     scene.AddSphere(buildSphere({0, 0, -10}, 2, bsdfid));

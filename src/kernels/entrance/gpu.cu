@@ -1,4 +1,5 @@
 #include "core/math/math_util.h"
+#include "core/tracer/constant.h"
 #include "kernels/entrance/entrance.h"
 
 #include "core/primitive/primitive.h"
@@ -38,8 +39,8 @@ namespace mps::kernels {
     ray.dir = quat_rotate(ctx.camera.quat, ray.dir); 
     ray.dir = mps::normalize(ray.dir); 
 
-    ray.min = 0.01f; 
-    ray.max = 10000.0f; 
+    ray.min = core::RenderConstants::RAY_MIN; 
+    ray.max = ctx.constant.RAY_MAX; 
 
     mps::core::Random rdm(mps::core::make_seed(col, row)); 
 

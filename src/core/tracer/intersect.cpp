@@ -1,6 +1,8 @@
 #include "core/tracer/intersect.h"
 #include "core/math/math_util.h"
 
+#include "core/tracer/constant.h"
+
 namespace mps::core {
 
 
@@ -40,7 +42,7 @@ namespace mps::core {
 
     // TBN 
     vec3f local_ng = mps::quat_rotate_inv(primitive.info.quater, ng); 
-    vec3f T = (mps::fabsf(local_ng.y) > 0.999f) ? vec3f{1.0f, 0.0f, 0.0f} : vec3f{-local_ng.z, 0, local_ng.x}; 
+    vec3f T = (mps::fabsf(local_ng.y) > RenderConstants::TBN_T_MAX) ? vec3f{1.0f, 0.0f, 0.0f} : vec3f{-local_ng.z, 0, local_ng.x}; 
     T = mps::normalize(T); 
     vec3f B = mps::cross(local_ng, T); 
     B = (mps::dot(B, {0, -1, 0}) < 0.0f) ? -B : B; 
