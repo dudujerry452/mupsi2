@@ -12,7 +12,7 @@
 namespace mps::core {
 
   struct RenderSettings {
-    u32 max_bounce; 
+    i32 max_bounce; 
   }; 
 
   struct RenderContext {

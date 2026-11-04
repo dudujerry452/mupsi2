@@ -18,7 +18,7 @@ namespace mps::core {
 
     f32 t;  // fly distance
     vec3f p; // world hit point 
-    vec3f wo; // where it from (in calculation)
+    vec3f wo; // where it from, from p to camera
 
     // TBN 
     vec3f ng; // geometry normal 

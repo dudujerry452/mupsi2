@@ -252,4 +252,11 @@ namespace mps {
   MPHD MPINL RGB_F32 operator*(const f32 a, const RGB_F32 b) { return b*a; }
   MPHD MPINL RGB_F32 operator/(const RGB_F32 a, const f32 b) { const f32 i = 1.0f/b; return {a.r*i, a.g*i, a.b*i}; }
 
+  MPHD MPINL vec3f project_to(vec3f v, vec3f T, vec3f B, vec3f N) {
+    return vec3f{mps::dot(v, T), mps::dot(v, B), mps::dot(v, N)}; 
+  }
+  MPHD MPINL vec3f unproject_to(vec3f w, vec3f T, vec3f B, vec3f N) {
+    return w.x * T + w.y * B + w.z * N; 
+  }
+
 }

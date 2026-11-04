@@ -28,6 +28,7 @@ int main() {
     ctx.framebuffer.width = 512; 
     ctx.framebuffer.height = 256; 
     ctx.framebuffer.pixels = new mps::RGB_F32[ctx.framebuffer.pixelnum()]();
+    ctx.settings.max_bounce = 10; 
 
     auto fb = mps::kernels::Entrance<ACTIVE_BACKEND>::run(ctx); 
     

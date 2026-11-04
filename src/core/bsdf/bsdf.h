@@ -57,6 +57,7 @@ namespace mps::core {
   MPHD MPINL f32 bsdf_pdf(vec3f wi, vec3f wo, const BsdfParam& par) {
     MPS_BSDF_DISPATCH(f32, pdf(wi, wo, par))
   }
+  // notice: wo: local coordinate, not world coordnate
   MPHD MPINL vec3f bsdf_sample(vec3f wo, f32& pdf, const BsdfParam& par, Random& rd) {
     MPS_BSDF_DISPATCH(vec3f, sample(wo, pdf, par, rd))
   }

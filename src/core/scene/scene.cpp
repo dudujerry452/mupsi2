@@ -168,7 +168,7 @@ namespace mps::core {
     u32 bsdfid = scene.AddBsdf(BsdfType::Lambertain, texid); 
     
     scene.AddSphere(buildSphere({0, 0, -10}, 2, bsdfid));
-    Sphere sph = buildSphere({-5, 0, -10}, 2, bsdfid);
+    Sphere sph = buildSphere({-4, 0, -6}, 2, bsdfid);
     sph.info.hasEmis = 1; 
     sph.info.emisTexID = texid; 
     scene.AddSphere(std::move(sph));
