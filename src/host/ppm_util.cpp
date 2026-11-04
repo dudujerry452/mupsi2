@@ -30,14 +30,14 @@ namespace mps::host {
             };
         }
 
-        MPH void radianceTo8bit(
-            Texture<RGB_8Bit>& out,
-            const Texture<RGB_F32>& fb
-        ) {
-            for (i32 i = 0; i < fb.width * fb.height; ++i) {
-                out.pixels[i] = radianceTo8bit(fb.pixels[i]);
-            }
+    MPH void radianceTo8bit(
+        Texture<RGB_8Bit>& out,
+        const Texture<RGB_F32>& fb
+    ) {
+        for (i32 i = 0; i < fb.width * fb.height; ++i) {
+            out.pixels[i] = radianceTo8bit(fb.pixels[i]);
         }
+    }
 
 
     MPH void savePPM(const std::string& filename, const Texture<RGB_8Bit>& fb) {

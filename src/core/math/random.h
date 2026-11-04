@@ -35,7 +35,9 @@ namespace mps::core {
     u64 state;
     u64 oldState;
 
-    MPHD Random(u64 seed) : state(seed), oldState(seed) {
+    MPHD void init(u64 seed){
+      state = seed;
+      oldState = seed; 
       if (state == 0) state = 1;
       nextI();  // need a warm up... 
     }

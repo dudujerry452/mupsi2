@@ -1,3 +1,4 @@
+#include "core/basic/texture.h"
 #include "core/math/math_util.h"
 #include "core/tracer/constant.h"
 #include "kernels/entrance/entrance.h"
@@ -11,20 +12,12 @@
 
 #include "core/math/random.h"
 
+#include <vector>
+
 namespace mps::kernels {
 
 
-  // MPH core::SceneDevice* transfer(const core::SceneDevice* host_dev) {
-  //   core::SceneDevice* dev = nullptr; 
-
-  //   cudaCheck(cudaMalloc(&dev, sizeof(core::SceneDevice)));
-  //   cudaCheck(cudaMemcpy(dev, host_dev, 1, ::cudaMemcpyHostToDevice)); 
-  // }
-
-  MPG void trace(core::RenderContext ctx) {
-    u32 col = blockIdx.x * blockDim.x + threadIdx.x; 
-    u32 row = blockIdx.y * blockDim.y + threadIdx.y; 
-
+  MPHD core::Ray cast_ray(u32 col, u32 row, const core::RenderContext& ctx) {
     u32 width = ctx.framebuffer.width; 
     u32 height = ctx.framebuffer.height; 
 
@@ -42,12 +35,32 @@ namespace mps::kernels {
     ray.min = core::RenderConstants::RAY_MIN; 
     ray.max = ctx.constant.RAY_MAX; 
 
-    mps::core::Random rdm(mps::core::make_seed_f(col, row)); 
+    
+
+    return ray; 
+  }
+
+  MPG void trace(core::RenderContext ctx) {
+    u32 col = blockIdx.x * blockDim.x + threadIdx.x; 
+    u32 row = blockIdx.y * blockDim.y + threadIdx.y; 
+
+    core::Ray ray = cast_ray(col, row, ctx); 
+    mps::core::Random rdm; rdm.init(mps::core::make_seed_f(col, row)); 
 
     ctx.framebuffer.pixel(col, row) = core::trace(ray, ctx, rdm); 
   }
 
-  Texture<RGB_F32> Entrance<Backend::CUDA>::run(const core::RenderContext& ctx) {
+  MPG void trace_depth(core::RenderContext ctx) {
+    u32 col = blockIdx.x * blockDim.x + threadIdx.x; 
+    u32 row = blockIdx.y * blockDim.y + threadIdx.y; 
+
+    core::Ray ray = cast_ray(col, row, ctx); 
+    mps::core::Random rdm; rdm.init(mps::core::make_seed_f(col, row)); 
+
+    ctx.framebuffer.pixel(col, row) = core::trace_depth(ray, ctx, rdm); 
+  }
+
+  std::vector<Texture<RGB_F32>> Entrance<Backend::CUDA>::run(const core::RenderContext& ctx) {
     mplog("Use Backend: CUDA");
 
     auto _ctx = ctx; 
@@ -62,11 +75,19 @@ namespace mps::kernels {
     ); 
 
     trace<<<griddim, blockdim>>>(_ctx); 
-
     cudaCheckLast();
 
-    auto ret = _ctx.framebuffer; 
-    ret.download();  
+    std::vector<Texture<RGB_F32>> ret; 
+    auto res = _ctx.framebuffer; 
+    res.download();
+    ret.push_back(res);   
+
+    trace_depth<<<griddim, blockdim>>>(_ctx); 
+    cudaCheckLast();
+    res = _ctx.framebuffer; 
+    res.download();
+    ret.push_back(res); 
+
     _ctx.framebuffer.destory(); 
     _ctx.scene.destory(); 
     return ret;   

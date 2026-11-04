@@ -6,6 +6,8 @@
 
 #include "core/basic/texture.h"
 
+#include <vector> 
+
 namespace mps::kernels {
 
   template<Backend B> struct Entrance {
@@ -13,10 +15,10 @@ namespace mps::kernels {
   }; 
 
   template<> struct Entrance<Backend::CUDA> {
-    static Texture<RGB_F32> run(const core::RenderContext& ctx); 
+    MPH static std::vector<Texture<RGB_F32>> run(const core::RenderContext& ctx); 
   }; 
 
   template<> struct Entrance<Backend::CPU> {
-    static Texture<RGB_F32> run(const core::RenderContext& ctx); 
+    MPH static Texture<RGB_F32> run(const core::RenderContext& ctx); 
   };
 }

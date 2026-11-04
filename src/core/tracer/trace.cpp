@@ -86,5 +86,18 @@ namespace mps::core {
     return vec3f_to_RGBF32(ret);  
   }
 
+  MPHD RGB_F32 trace_depth(const Ray& ray, const RenderContext& ctx, Random& rdm) {
+
+    // vec3f ret{ray.max, ray.max, ray.max}; 
+    vec3f ret{}; 
+
+    auto hit = intersect(ray, ctx.scene); 
+    if(hit.hit) {
+      ret.x = ret.y = ret.z = hit.t; 
+    }
+    
+    return vec3f_to_RGBF32(ret);  
+  }
+
 
 }

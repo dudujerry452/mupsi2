@@ -3,6 +3,7 @@
 #include "core/basic/core.h"
 #include "core/basic/mems.h"
 #include "core/utils/cuda_util.h"
+#include "core/utils/log.h"
 
 namespace mps {
 
@@ -16,6 +17,13 @@ namespace mps {
     MPHD MPINL PixelType& pixel(i32 x, i32 y) const {return pixels[y * width + x]; }
     MPHD MPINL u32 pixelnum() const {return width*height; }
     MPHD MPINL u32 bytesize() const {return width*height*sizeof(PixelType); }  
+
+    MPH MPINL void alloc() {
+      if(pixelnum() <= 0) {
+        mppanic("pixelnum < 0 when alloc Texture on host"); 
+      }
+      pixels = new PixelType[pixelnum()](); 
+    } 
 
     // ---- cuda -----
     MPH void upload() {

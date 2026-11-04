@@ -27,22 +27,29 @@ int main() {
     ctx.camera.LookAt({0, 0, -1}, {0, 1, 0}); 
     ctx.framebuffer.width = 512; 
     ctx.framebuffer.height = 256; 
-    ctx.framebuffer.pixels = new mps::RGB_F32[ctx.framebuffer.pixelnum()]();
+    ctx.framebuffer.alloc(); 
+    ctx.framebuffer_1.alloc(); 
+    ctx.framebuffer_2.alloc(); 
     ctx.settings.max_bounce = 10; 
 
-    auto fb = mps::kernels::Entrance<ACTIVE_BACKEND>::run(ctx); 
+    auto fbs = mps::kernels::Entrance<ACTIVE_BACKEND>::run(ctx); 
     
     mps::Texture<mps::RGB_8Bit> out; 
     out.width = ctx.framebuffer.width; 
     out.height = ctx.framebuffer.height;  
-    out.pixels = new mps::RGB_8Bit[out.pixelnum()]();  
+    out.alloc(); 
 
-    mps::host::radianceTo8bit(out, fb); 
+    mps::host::radianceTo8bit(out, fbs[0]); 
     mps::host::savePPM("test.ppm", out); 
+    mps::host::radianceTo8bit(out, fbs[1]); 
+    mps::host::savePPM("test_depth.ppm", out); 
 
     out.free();
-    fb.free(); 
+    fbs[0].free();
+    fbs[1].free();  
     ctx.framebuffer.free(); 
+    ctx.framebuffer_1.free(); 
+    ctx.framebuffer_2.free(); 
     ctx.scene.free(); 
     
     return 0;
