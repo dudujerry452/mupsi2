@@ -39,6 +39,14 @@ namespace mps {
     f32 r,g,b; 
   }; 
 
+  MPHD MPINL RGB_F32 vec3f_to_RGBF32(vec3f v) {
+    RGB_F32 ret{v.x, v.y, v.z}; 
+    return ret; 
+  }
 
+  MPHD MPINL vec3f RGBF32_to_vec3f(RGB_F32 rgb) {
+    vec3f ret{rgb.r, rgb.g, rgb.b}; 
+    return ret; 
+  }
 
 }

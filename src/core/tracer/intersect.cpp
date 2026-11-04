@@ -36,7 +36,7 @@ namespace mps::core {
     if(t2 < 0.0f) return hr; 
     
     f32 t = (t1 >= 0.0f) ? t1 : t2;  if(t > ray.max) return hr; 
-    vec3f p = O + D*t; 
+    vec3f p = ray.at(t); 
     vec3f ng = mps::normalize(p-C); 
     ng = (t1 >= 0.0f) ? ng : -ng; 
 
@@ -70,4 +70,42 @@ namespace mps::core {
     return hr; 
 
   }; 
+
+
+  MPHD bool occulude(const Ray& ray, const Sphere& primitive) {
+    
+    const auto C = primitive.info.wpos; 
+    const auto O = ray.at(ray.min); 
+    const auto D = ray.dir; // normalized 
+    const auto V = O - C; 
+    const auto R = primitive.radius * primitive.info.scale; 
+
+    // solve 2 var equation
+    f32 k = mps::dot(D, V); 
+
+    f32 disc = 
+      mps::square(k) - 
+      (mps::dot(V,V) - mps::square(R))
+    ;
+
+    if(disc < 0.0f) return true; 
+
+    disc = mps::sqrtf(disc); 
+    f32 t1 = -k - disc, t2 = -k + disc; 
+
+    if(t2 < 0.0f) return true; 
+    
+    f32 t = (t1 >= 0.0f) ? t1 : t2;  if(t > ray.max) return true; 
+
+    return false; 
+  }
+
+  MPHD f32 surface_pdf(vec3f p, vec3f y, vec3f ng, const Sphere& primitive) {
+    vec3f V = p-y;
+    f32 r2 = mps::norm2(V); 
+    V = V * mps::rsqrtf(r2); 
+    f32 cost = mps::dot(V, ng); 
+    f32 A = mps::powf((primitive.radius * primitive.info.scale), 2) * mps::pi; 
+    return r2 / (cost * A); 
+  }
 }
