@@ -21,8 +21,14 @@ namespace mps::core {
   }
 
   MPH void MeshHost::transform(SceneDevice& scene) const {
-    if (vertices.size() > UINT32_MAX || indices.size() > UINT32_MAX) {
-      throw std::runtime_error("Mesh is too large for u32 counts");
+    if (vertices.size() > UINT32_MAX) {
+      throw std::runtime_error("Mesh has too many vertices");
+    }
+    if (indices.size() % 3 != 0) {
+      throw std::runtime_error("Mesh indices are not triangle triples");
+    }
+    if (indices.size() / 3 > UINT32_MAX) {
+      throw std::runtime_error("Mesh has too many triangles");
     }
     if (!normals.empty() && normals.size() != vertices.size()) {
       throw std::runtime_error("Mesh normals size does not match vertices");
@@ -32,7 +38,8 @@ namespace mps::core {
     }
 
     const u32 num_new_vertices = static_cast<u32>(vertices.size());
-    const u32 num_new_indices = static_cast<u32>(indices.size());
+    // MeshHost::indices 是扁平的三元组, SceneDevice 里按 TriangleU 存。
+    const u32 num_new_indices = static_cast<u32>(indices.size() / 3);
 
     const u64 new_num_vertices =
         static_cast<u64>(scene.num_vertices) + num_new_vertices;
@@ -61,7 +68,7 @@ namespace mps::core {
     std::unique_ptr<vec3f[]> new_vertices(new vec3f[total_vertices]);
     std::unique_ptr<vec3f[]> new_normals(new vec3f[total_vertices]);
     std::unique_ptr<vec2f[]> new_uvs(new vec2f[total_vertices]);
-    std::unique_ptr<u32[]> new_indices(new u32[total_indices]);
+    std::unique_ptr<TriangleU[]> new_indices(new TriangleU[total_indices]);
     std::unique_ptr<MeshDevice[]> new_meshes(
         new MeshDevice[static_cast<u32>(new_num_meshes)]);
 
@@ -110,9 +117,15 @@ namespace mps::core {
           uvs.begin(), uvs.end(),
           new_uvs.get() + old_num_vertices);
     }
-    std::copy(
-        indices.begin(), indices.end(),
-        new_indices.get() + old_num_indices);
+    // 把扁平索引三个一组打包成 TriangleU。
+    for (u32 t = 0; t < num_new_indices; ++t) {
+      const std::size_t base = static_cast<std::size_t>(t) * 3;
+      new_indices[old_num_indices + t] = TriangleU{
+          indices[base + 0],
+          indices[base + 1],
+          indices[base + 2],
+      };
+    }
 
     MeshDevice mesh_dev{};
     mesh_dev.info = info;

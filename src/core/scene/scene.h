@@ -20,7 +20,7 @@ namespace mps::core {
     vec2f* uvs; 
 
     u32 num_indices;
-    u32 *indices; 
+    TriangleU *indices; 
 
     u32 num_spheres; 
     Sphere *spheres; 

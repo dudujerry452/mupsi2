@@ -58,7 +58,7 @@ namespace mps::core {
     u32 offset_vertices; 
 
     u32 num_indices; 
-    // u32* indices; 
+    // TriangleU* indices; 
     u32 offset_indices; 
   }; 
 
