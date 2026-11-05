@@ -166,9 +166,7 @@ namespace mps::core {
           tri[k] = it->second;
         }
 
-        ret.indices.push_back(tri[0]);
-        ret.indices.push_back(tri[1]);
-        ret.indices.push_back(tri[2]);
+        ret.triangles.push_back(TriangleU{tri[0], tri[1], tri[2]});
         offset += 3;
 
         // 对没有自带法线的顶点累加面法线(面积加权, 即未归一化的叉积)。

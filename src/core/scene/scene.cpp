@@ -22,8 +22,8 @@ namespace mps::core {
       uvs = ::mps::upload(uvs, num_vertices);
     }
 
-    if(num_indices > 0) {
-      indices = ::mps::upload(indices, num_indices);
+    if(num_triangles > 0) {
+      triangles = ::mps::upload(triangles, num_triangles);
     }
 
     if(num_meshes > 0) {
@@ -64,8 +64,8 @@ namespace mps::core {
       ::mps::destory(uvs);
     }
 
-    if(num_indices != 0) {
-      ::mps::destory(indices);
+    if(num_triangles != 0) {
+      ::mps::destory(triangles);
     }
 
     if(num_meshes != 0) {
@@ -105,8 +105,8 @@ namespace mps::core {
       safe_free_arr(&uvs);
     }
 
-    if(num_indices != 0) {
-      safe_free_arr(&indices);
+    if(num_triangles != 0) {
+      safe_free_arr(&triangles);
     }
 
     if(num_meshes != 0) {

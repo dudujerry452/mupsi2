@@ -41,7 +41,7 @@ namespace mps::core {
     
     std::vector<vec3f> vertices; 
     std::vector<vec3f> normals; 
-    std::vector<u32> indices; 
+    std::vector<TriangleU> triangles; 
     std::vector<vec2f> uvs; 
 
     // alloc and add a MeshDevice to SceneDevice on host
@@ -57,9 +57,9 @@ namespace mps::core {
     // vec2f* uvs; 
     u32 offset_vertices; 
 
-    u32 num_indices; 
-    // TriangleU* indices; 
-    u32 offset_indices; 
+    u32 num_triangles; 
+    // TriangleU* triangles; 
+    u32 offset_triangles; 
   }; 
 
   MPH MeshHost buildMeshHost(std::string path); 

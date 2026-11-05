@@ -19,11 +19,15 @@ namespace mps::core {
     vec3f* normals; 
     vec2f* uvs; 
 
-    u32 num_indices;
-    TriangleU *indices; 
+    u32 num_triangles;
+    TriangleU *triangles; 
 
     u32 num_spheres; 
-    Sphere *spheres; 
+    Sphere *spheres;
+    
+    struct bvh_ {
+       
+    } bvh; 
 
     u32 num_textures; 
     Texture<RGB_F32> *textures; 

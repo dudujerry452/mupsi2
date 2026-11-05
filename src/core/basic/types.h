@@ -55,4 +55,9 @@ namespace mps {
     u32 c; 
   }; 
 
+  struct AABB {
+    vec3f a; 
+    vec3f b;
+  }; 
+
 }
