@@ -43,8 +43,12 @@ endif()
 
 # ——— 头文件 ———
 add_library(mupsi_header INTERFACE)
-# src/ 供内部头文件, 项目根目录供 <3rdparty/...> 引用
+# src/ 供内部头文件, 项目根目录供 "3rdparty/..." 引用
 target_include_directories(mupsi_header INTERFACE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR})
+
+# ——— 第三方单头文件库 ———
+add_subdirectory(3rdparty)
+target_link_libraries(mupsi_header INTERFACE tinyobjloader)
 
 # ——— core:设备无关计算代码; 只存在g++时用g++编译, 否则用nvcc编译(因为标记了MPHD,因此编译为device和host)———
 file(GLOB_RECURSE CORE_SOURCES CONFIGURE_DEPENDS src/core/*.cpp)

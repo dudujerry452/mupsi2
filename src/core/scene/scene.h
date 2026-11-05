@@ -10,11 +10,17 @@
 namespace mps::core {
 
    struct SceneDevice {
+
+    u32 num_meshes; 
+    MeshDevice *meshes; 
     
     u32 num_vertices;
-    u32 num_indexes;  
-    vec3f *vertices; 
-    u32 *indexes; 
+    vec3f* vertices; 
+    vec3f* normals; 
+    vec2f* uvs; 
+
+    u32 num_indices;
+    u32 *indices; 
 
     u32 num_spheres; 
     Sphere *spheres; 
@@ -39,7 +45,7 @@ namespace mps::core {
 
   struct SceneHost {
 
-    std::vector<Mesh> meshes; 
+    std::vector<MeshHost> meshes; 
     std::vector<Sphere> spheres;  
     std::vector<Light> lights; 
     std::vector<Texture<RGB_F32> > textures;

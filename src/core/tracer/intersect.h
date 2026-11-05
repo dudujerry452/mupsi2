@@ -36,4 +36,9 @@ namespace mps::core {
   // p: where light come from; y: point on light; ng: normal on y
   MPHD f32 surface_pdf(vec3f p, vec3f y, vec3f ng, const Sphere& primitive); 
 
+  MPHD HitRecord intersect(const Ray& ray, const MeshDevice& primitive); 
+  MPHD bool occulude(const Ray& ray, const MeshDevice& primitive); 
+  // p: where light come from; y: point on light; ng: normal on y
+  MPHD f32 surface_pdf(vec3f p, vec3f y, vec3f ng, const MeshDevice& primitive); 
+
 }

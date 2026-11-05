@@ -16,6 +16,20 @@ namespace mps::core {
 
   
   MPH void SceneDevice::upload() {
+    if(num_vertices > 0) {
+      vertices = ::mps::upload(vertices, num_vertices);
+      normals = ::mps::upload(normals, num_vertices);
+      uvs = ::mps::upload(uvs, num_vertices);
+    }
+
+    if(num_indices > 0) {
+      indices = ::mps::upload(indices, num_indices);
+    }
+
+    if(num_meshes > 0) {
+      meshes = ::mps::upload(meshes, num_meshes);
+    }
+
     if(num_spheres > 0) {
       auto dev = ::mps::upload(spheres, num_spheres);
       spheres = dev;  
@@ -44,6 +58,20 @@ namespace mps::core {
   }
   
   MPH void SceneDevice::destory() {
+    if(num_vertices != 0) {
+      ::mps::destory(vertices);
+      ::mps::destory(normals);
+      ::mps::destory(uvs);
+    }
+
+    if(num_indices != 0) {
+      ::mps::destory(indices);
+    }
+
+    if(num_meshes != 0) {
+      ::mps::destory(meshes);
+    }
+
     if(num_spheres != 0) {
       ::mps::destory(spheres); 
     }
@@ -71,6 +99,20 @@ namespace mps::core {
 
 
   MPH void SceneDevice::free() {
+    if(num_vertices != 0) {
+      safe_free_arr(&vertices);
+      safe_free_arr(&normals);
+      safe_free_arr(&uvs);
+    }
+
+    if(num_indices != 0) {
+      safe_free_arr(&indices);
+    }
+
+    if(num_meshes != 0) {
+      safe_free_arr(&meshes);
+    }
+
     if(num_spheres != 0) {
       safe_free_arr(&spheres); 
     }
@@ -95,6 +137,12 @@ namespace mps::core {
 
   MPH SceneDevice SceneHost::transform() const {
     core::SceneDevice dev{};
+
+    // 每个 MeshHost 把数据追加到 dev 的全局顶点/索引 buffer,
+    // MeshDevice 里只保存 offset + count。
+    for(const auto& mesh : meshes) {
+      mesh.transform(dev);
+    }
 
     dev.num_spheres = spheres.size(); 
     if(dev.num_spheres != 0) {

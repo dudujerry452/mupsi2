@@ -2,6 +2,7 @@
 
 #include "core/basic/core.h"
 #include <string>
+#include <vector>
 
 namespace mps::core {
 
@@ -32,12 +33,35 @@ namespace mps::core {
 
   MPHD Sphere buildSphere(vec3f pos, f32 r, u32 bsdfID);
 
-  struct Mesh {
+  struct MeshDevice; 
+  struct SceneDevice; 
+
+  struct MeshHost {
     PrimitiveInfo info; 
-    vec3f* vertices; 
-    u32* indexes; 
+    
+    std::vector<vec3f> vertices; 
+    std::vector<vec3f> normals; 
+    std::vector<u32> indices; 
+    std::vector<vec2f> uvs; 
+
+    // alloc and add a MeshDevice to SceneDevice on host
+    MPH void transform(SceneDevice& scene) const; 
   };
 
-  MPH Mesh buildMesh(std::string path); 
+  struct MeshDevice {
+    PrimitiveInfo info; 
+
+    u32 num_vertices; 
+    // vec3f* vertices; 
+    // vec3f* normals; 
+    // vec2f* uvs; 
+    u32 offset_vertices; 
+
+    u32 num_indices; 
+    // u32* indices; 
+    u32 offset_indices; 
+  }; 
+
+  MPH MeshHost buildMeshHost(std::string path); 
 
 }
