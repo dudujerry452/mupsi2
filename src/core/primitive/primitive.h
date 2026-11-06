@@ -52,13 +52,9 @@ namespace mps::core {
     PrimitiveInfo info; 
 
     u32 num_vertices; 
-    // vec3f* vertices; 
-    // vec3f* normals; 
-    // vec2f* uvs; 
     u32 offset_vertices; 
 
     u32 num_triangles; 
-    // TriangleU* triangles; 
     u32 offset_triangles; 
   }; 
 

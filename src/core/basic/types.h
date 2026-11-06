@@ -56,8 +56,27 @@ namespace mps {
   }; 
 
   struct AABB {
-    vec3f a; 
-    vec3f b;
+    vec3f min; 
+    vec3f max;
+
+    MPHD void update(vec3f p) {
+      if(p.x > max.x) max.x = p.x; 
+      else if(p.x < min.x) min.x = p.x;
+      if(p.y > max.y) max.y = p.y; 
+      else if(p.y < min.y) min.y = p.y;
+      if(p.z > max.z) max.z = p.z; 
+      else if(p.z < min.z) min.z = p.z; 
+    }
+  }; 
+
+    struct BVHNode {
+    AABB aabb; 
+
+    u32 left; 
+    u32 right; 
+
+    u32 first; 
+    u32 count; 
   }; 
 
 }

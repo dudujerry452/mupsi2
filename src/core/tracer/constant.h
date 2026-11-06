@@ -13,6 +13,8 @@ namespace mps::core {
     
 
     static constexpr f32 TBN_T_MAX = 0.9999f; 
+
+    static constexpr u32 MIN_BVH_NODE_COUNT = 4; 
   }; 
 
 

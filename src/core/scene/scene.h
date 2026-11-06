@@ -9,7 +9,7 @@
 
 namespace mps::core {
 
-   struct SceneDevice {
+  struct SceneDevice {
 
     u32 num_meshes; 
     MeshDevice *meshes; 
@@ -26,8 +26,10 @@ namespace mps::core {
     Sphere *spheres;
     
     struct bvh_ {
-       
-    } bvh; 
+      u32 num_bvhnode; 
+      BVHNode* bvh_nodes; 
+      u32 *instances_order; 
+    } bvh_b, bvh_t; 
 
     u32 num_textures; 
     Texture<RGB_F32> *textures; 
@@ -37,6 +39,10 @@ namespace mps::core {
 
     u32 num_lights; 
     Light *lights; 
+
+    // ---- bvh ----
+    // alloc & compute bvh
+    MPH void buildBVH(); 
 
     // ---- cuda ----
     // upload to device and rebind
@@ -54,6 +60,7 @@ namespace mps::core {
     std::vector<Light> lights; 
     std::vector<Texture<RGB_F32> > textures;
     std::vector<Bsdf> bsdfs; 
+
     // std::vector<Medium> media;  
  
     MPH ~SceneHost(); 
