@@ -24,7 +24,7 @@ namespace mps::core {
 
     if(num_triangles > 0) {
       triangles = ::mps::upload(triangles, num_triangles);
-      bvh_b.instances_order = ::mps::upload(bvh_b.instances_order, num_triangles);
+      bvh_b.triangles_order = ::mps::upload(bvh_b.triangles_order, num_triangles);
     }
 
     if(num_meshes > 0) {
@@ -67,7 +67,7 @@ namespace mps::core {
 
     if(num_triangles != 0) {
       ::mps::destory(triangles);
-      ::mps::destory(bvh_b.instances_order); 
+      ::mps::destory(bvh_b.triangles_order); 
     }
 
     if(num_meshes != 0) {
@@ -109,7 +109,7 @@ namespace mps::core {
 
     if(num_triangles != 0) {
       safe_free_arr(&triangles);
-      safe_free_arr(&bvh_b.instances_order); 
+      safe_free_arr(&bvh_b.triangles_order); 
     }
 
     if(num_meshes != 0) {

@@ -59,6 +59,10 @@ namespace mps {
     vec3f min; 
     vec3f max;
 
+    MPHD vec3f length() const {
+      return {max.x - min.x, max.y - min.y, max.z - min.z}; 
+    }
+
     MPHD void update(vec3f p) {
       if(p.x > max.x) max.x = p.x; 
       else if(p.x < min.x) min.x = p.x;
@@ -69,7 +73,7 @@ namespace mps {
     }
   }; 
 
-    struct BVHNode {
+  struct BVHNode {
     AABB aabb; 
 
     u32 left; 

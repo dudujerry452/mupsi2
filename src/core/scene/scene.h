@@ -25,11 +25,18 @@ namespace mps::core {
     u32 num_spheres; 
     Sphere *spheres;
     
-    struct bvh_ {
+    struct bvh_b_ {
+      u32 num_bvhnode; 
+      u32 *bvh_node_begin; // num_meshes
+      BVHNode* bvh_nodes; 
+      u32 *triangles_order; 
+    } bvh_b; 
+    
+    struct bvh_t_ {
       u32 num_bvhnode; 
       BVHNode* bvh_nodes; 
       u32 *instances_order; 
-    } bvh_b, bvh_t; 
+    } bvh_t; 
 
     u32 num_textures; 
     Texture<RGB_F32> *textures; 
